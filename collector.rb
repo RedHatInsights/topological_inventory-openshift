@@ -53,24 +53,29 @@ collections = {
 puts "Collecting namespaces..."
 namespaces = kubernetes_connection.get_namespaces
 namespaces.each do |namespace|
-  collections[:namespaces].data << {
+  collections[:namespaces].data << Insights::TopologicalInventory::Client::ContainerProject.new(
     :name             => namespace.metadata.name,
     :source_ref       => namespace.metadata.uid,
     :resource_version => namespace.metadata.resourceVersion,
     :display_name     => namespace.metadata.annotations["openshift.io/display-name"],
-  }
+  )
 end
 puts "Collecting namespaces...Complete - Count [#{namespaces.count}]"
 
 puts "Collecting pods"
 pods = kubernetes_connection.get_pods
 pods.each do |pod|
-  collections[:pods].data << {
-    :name             => pod.metadata.name,
-    :source_ref       => pod.metadata.uid,
-    :resource_version => pod.metadata.resourceVersion,
-    :ipaddress        => pod.status.podIP
-  }
+  collections[:pods].data << Insights::TopologicalInventory::Client::ContainerGroup.new(
+    :name              => pod.metadata.name,
+    :source_ref        => pod.metadata.uid,
+    :resource_version  => pod.metadata.resourceVersion,
+    :ipaddress         => pod.status.podIP,
+    :container_project => Insights::TopologicalInventory::Client::InventoryObjectLazy.new(
+      :inventory_collection_name => :container_projects,
+      :reference                 => {:name => pod.metadata.namespace},
+      :ref                       => :by_name,
+    )
+  )
 end
 puts "Collecting pods...Complete - Count [#{pods.count}]"
 
