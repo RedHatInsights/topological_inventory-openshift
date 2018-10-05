@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+require "byebug"
+
+lib = File.expand_path("../../lib", __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+
+require "bundler/setup"
+require "openshift/collector"
+
+def parse_args
+  require 'optimist'
+  opts = Optimist::options do
+    opt :source, "Inventory Source UID", :type => :string, :required => true
+    opt :hostname, "Hostname of the OpenShift master node", :type => :string, :required => true
+    opt :ingress_api, "Hostname of the ingress-api route", :type => :string, :default => "localhost:9292"
+    opt :token, "Auth token to the OpenShift cluster", :type => :string
+  end
+
+  opts[:token] ||= ENV["OPENSHIFT_AUTH_TOKEN"]
+
+  if opts[:token].nil?
+    puts "Error: option --token or OPENSHIFT_AUTH_TOKEN Env Var must be specified."
+    exit -1
+  end
+
+  opts
+end
+
+args = parse_args
+
+TopologicalInventory::Client.configure.host   = args[:ingress_api]
+TopologicalInventory::Client.configure.scheme = "http"
+
+collector = Openshift::Collector.new(args[:source], args[:hostname], args[:token])
+Thread.new { collector.collect! }
+
+begin
+  loop { sleep 5 }
+rescue Interrupt
+  collector.stop
+end

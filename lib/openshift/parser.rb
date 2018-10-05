@@ -1,0 +1,38 @@
+require "active_support/inflector"
+require "openshift/parser/pod"
+require "openshift/parser/namespace"
+require "openshift/parser/template"
+require "openshift/parser/cluster_service_class"
+require "openshift/parser/cluster_service_plan"
+require "openshift/parser/service_instance"
+
+module Openshift
+  class Parser
+    class << self
+      def parser_klass_for(entity_type)
+        "Openshift::Parser::#{entity_type.classify}".constantize
+      end
+    end
+
+    attr_accessor :collections
+
+    def initialize
+      self.collections = {}
+    end
+
+    private
+
+    def collection
+      collections[inventory_collection_name] ||=
+        TopologicalInventory::Client::InventoryCollection.new(:name => inventory_collection_name)
+    end
+
+    def parse_base_item(entity)
+      {
+        :name             => entity.metadata.name,
+        :source_ref       => entity.metadata.uid,
+        :resource_version => entity.metadata.resourceVersion,
+      }
+    end
+  end
+end
