@@ -24,15 +24,24 @@ module Openshift
 
     def collection
       collections[inventory_collection_name] ||=
-        TopologicalInventory::Client::InventoryCollection.new(:name => inventory_collection_name)
+        TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => inventory_collection_name)
     end
 
     def parse_base_item(entity)
       {
-        :name             => entity.metadata.name,
-        :source_ref       => entity.metadata.uid,
-        :resource_version => entity.metadata.resourceVersion,
+        :name              => entity.metadata.name,
+        :source_ref        => entity.metadata.uid,
+        :resource_version  => entity.metadata.resourceVersion,
+        :container_project => namespace_lazy_ref(entity),
       }
+    end
+
+    def namespace_lazy_ref(entity)
+      TopologicalInventory::IngressApi::Client::InventoryObjectLazy.new(
+        :inventory_collection_name => :container_projects,
+        :reference                 => {:name => entity.metadata&.namespace},
+        :ref                       => :by_name,
+      )
     end
   end
 end

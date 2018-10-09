@@ -6,8 +6,10 @@ module Openshift
       end
 
       def parse_namespace(namespace)
-        collection.data << TopologicalInventory::Client::ContainerProject.new(
-          parse_base_item(namespace).except(:namespace)
+        collection.data << TopologicalInventory::IngressApi::Client::ContainerProject.new(
+          :name              => namespace.metadata.name,
+          :source_ref        => namespace.metadata.uid,
+          :resource_version  => namespace.metadata.resourceVersion,
         )
       end
 

@@ -6,7 +6,7 @@ module Openshift
       end
 
       def parse_template(template)
-        collection.data << TopologicalInventory::Client::ContainerTemplate.new(
+        collection.data << TopologicalInventory::IngressApi::Client::ContainerTemplate.new(
           parse_base_item(template)
         )
       end

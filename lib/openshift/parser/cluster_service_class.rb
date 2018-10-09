@@ -6,7 +6,7 @@ module Openshift
       end
 
       def parse_service_cluster_class(service_class)
-        collection.data << TopologicalInventory::Client::ServiceOffering.new(
+        collection.data << TopologicalInventory::IngressApi::Client::ServiceOffering.new(
           :source_ref  => service_class.spec.externalID,
           :name        => service_class.spec&.externalName,
           :description => service_class.spec&.description,

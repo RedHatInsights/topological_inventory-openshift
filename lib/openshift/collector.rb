@@ -1,7 +1,7 @@
 require "concurrent"
 require "openshift/connection"
 require "openshift/parser"
-require "topological_inventory/client"
+require "topological_inventory/ingress_api/client"
 
 module Openshift
   class Collector
@@ -68,9 +68,9 @@ module Openshift
       collections = parser.collections
 
       ingress_api_client.save_inventory(
-        :inventory => TopologicalInventory::Client::Inventory.new(
+        :inventory => TopologicalInventory::IngressApi::Client::Inventory.new(
           :name        => "OCP",
-          :schema      => TopologicalInventory::Client::Schema.new(:name => "Default"),
+          :schema      => TopologicalInventory::IngressApi::Client::Schema.new(:name => "Default"),
           :source      => source,
           :collections => collections.values,
         )
@@ -124,7 +124,7 @@ module Openshift
     end
 
     def ingress_api_client
-      TopologicalInventory::Client::AdminsApi.new
+      TopologicalInventory::IngressApi::Client::AdminsApi.new
     end
   end
 end

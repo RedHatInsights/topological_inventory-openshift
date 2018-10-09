@@ -6,17 +6,10 @@ module Openshift
       end
 
       def parse_cluster_service_plan(service_plan)
-        collection.data << TopologicalInventory::Client::ServiceParametersSet.new(
+        collection.data << TopologicalInventory::IngressApi::Client::ServiceParametersSet.new(
           :source_ref       => service_plan.spec.externalID,
-          :name             => service_plan.metadata&.externalName,
-          :description      => service_plan.metadata&.description,
-          :service_offering => TopologicalInventory::Client::InventoryObjectLazy.new(
-            :inventory_collection_name => :service_offerings,
-            :references                => {
-              :source_ref => service_plan.spec.clusterServiceClassRef&.name,
-            },
-            :ref => :manager_ref
-          ),
+          :name             => service_plan.metadata&.name,
+          :resource_version => service_plan.metadata&.resourceVersion,
         )
       end
 

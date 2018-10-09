@@ -6,7 +6,7 @@ module Openshift
       end
 
       def parse_service_instance(service_instance)
-        collection.data << TopologicalInventory::Client::ServiceInstance.new(
+        collection.data << TopologicalInventory::IngressApi::Client::ServiceInstance.new(
           :source_ref => service_instance.spec.externalID,
           :name       => service_instance.metadata.name,
         )
