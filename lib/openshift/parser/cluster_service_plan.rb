@@ -1,23 +1,23 @@
 module Openshift
   class Parser
-    class ClusterServicePlan < Openshift::Parser
-      def parse(service_cluster_plans)
-        service_cluster_plans.each { |scp| parse_cluster_service_plan(scp) }
+    module ClusterServicePlan
+      def parse_cluster_service_plans(cluster_service_plans)
+        cluster_service_plans.each { |csp| parse_cluster_service_plan(csp) }
       end
 
       def parse_cluster_service_plan(service_plan)
-        collection.data << TopologicalInventory::IngressApi::Client::ServiceParametersSet.new(
+        service_parameters_set = TopologicalInventory::IngressApi::Client::ServiceParametersSet.new(
           :source_ref       => service_plan.spec.externalID,
           :name             => service_plan.metadata&.name,
           :resource_version => service_plan.metadata&.resourceVersion,
         )
+
+        collections[:service_parameters_sets] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :service_parameters_sets)
+        collections[:service_parameters_sets].data << service_parameters_set
       end
 
-      def parse_notice(notice)
-      end
-
-      def inventory_collection_name
-        :service_parameters_sets
+      def parse_cluster_service_plan_notice(notice)
+        parse_cluster_service_plan(notice.object)
       end
     end
   end

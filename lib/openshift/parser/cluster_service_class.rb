@@ -1,23 +1,23 @@
 module Openshift
   class Parser
-    class ClusterServiceClass < Openshift::Parser
-      def parse(service_cluster_classes)
-        service_cluster_classes.each { |scc| parse_service_cluster_class(scc) }
+    module ClusterServiceClass
+      def parse_cluster_service_classes(cluster_service_classes)
+        cluster_service_classes.each { |csc| parse_cluster_service_class(csc) }
       end
 
-      def parse_service_cluster_class(service_class)
-        collection.data << TopologicalInventory::IngressApi::Client::ServiceOffering.new(
+      def parse_cluster_service_class(service_class)
+        service_offering = TopologicalInventory::IngressApi::Client::ServiceOffering.new(
           :source_ref  => service_class.spec.externalID,
           :name        => service_class.spec&.externalName,
           :description => service_class.spec&.description,
         )
+
+        collections[:service_offerings] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :service_offerings)
+        collections[:service_offerings].data << service_offering
       end
 
-      def parse_notice(notice)
-      end
-
-      def inventory_collection_name
-        :service_offerings
+      def parse_cluster_service_class_notice(notice)
+        parse_cluster_service_class(notice.object)
       end
     end
   end

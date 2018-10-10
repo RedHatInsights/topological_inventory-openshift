@@ -6,20 +6,28 @@ require "topological_inventory/ingress_api/client"
 module Openshift
   class Collector
     def initialize(source, openshift_host, openshift_token)
-      self.collector_threads = {}
+      self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.log               = Logger.new(STDOUT)
       self.openshift_host    = openshift_host
       self.openshift_token   = openshift_token
+      self.queue             = Queue.new
+      self.resource_versions = Concurrent::Map.new
       self.source            = source
     end
 
     def collect!
+      full_refresh
+
       start_collector_threads
 
       until finished? do
-        sleep 10
         ensure_collector_threads
+
+        notices = []
+        notices << queue.pop until queue.empty?
+
+        targeted_refresh(notices) unless notices.empty?
       end
     end
 
@@ -29,7 +37,7 @@ module Openshift
 
     private
 
-    attr_accessor :collector_threads, :finished, :log, :openshift_host, :openshift_token, :source
+    attr_accessor :collector_threads, :finished, :log, :openshift_host, :openshift_token, :queue, :resource_versions, :source
 
     def finished?
       finished.value
@@ -47,41 +55,71 @@ module Openshift
     def start_collector_thread(entity_type)
       log.info("Starting collector thread for #{entity_type}...")
       connection = connection_for_entity_type(entity_type)
-      Thread.new { collector_thread(connection, entity_type) }
+
+      Thread.new do
+        collector_thread(connection, entity_type, resource_versions[entity_type])
+      end
     rescue => err
       log.error(err)
       nil
     end
 
-    def collector_thread(connection, entity_type)
-      parser_klass = Openshift::Parser.parser_klass_for(entity_type)
+    def collector_thread(connection, entity_type, resource_version)
+      resource_version ||= "0"
+      watch(connection, entity_type, resource_version) do |notice|
+        log.info("#{entity_type} #{notice.object.metadata.name} was #{notice.type.downcase}")
+        queue.push(notice)
+      end
+    rescue => err
+      log.error(err)
+    end
 
-      full_collection = connection.send("get_#{entity_type}")
-      return if full_collection.nil?
+    def watch(connection, entity_type, resource_version)
+      connection.send("watch_#{entity_type}", :resource_version => resource_version).each { |notice| yield notice }
+    end
 
-      resource_version = full_collection.resourceVersion
+    def full_refresh
+      parser = Openshift::Parser.new
 
-      log.info("Retrieved #{full_collection.count} #{entity_type}...")
+      entity_types.each do |entity_type|
+        entities = connection_for_entity_type(entity_type).send("get_#{entity_type}")
+        next if entities.nil?
 
-      parser = parser_klass.new
-      parser.parse(full_collection)
-      collections = parser.collections
+        log.info("Retrieved #{entities.count} #{entity_type}...")
+
+        resource_versions[entity_type] = entities.resourceVersion
+
+        parser.send("parse_#{entity_type}", entities)
+      end
+
+      save_inventory(parser.collections.values)
+    end
+
+    def targeted_refresh(notices)
+      parser = Openshift::Parser.new
+
+      notices.each do |notice|
+        entity_type = notice.object&.kind&.underscore
+        next if entity_type.nil?
+
+        parse_method = "parse_#{entity_type}_notice"
+        parser.send(parse_method, notice)
+      end
+
+      save_inventory(parser.collections.values)
+    end
+
+    def save_inventory(collections)
+      return if collections.empty?
 
       ingress_api_client.save_inventory(
         :inventory => TopologicalInventory::IngressApi::Client::Inventory.new(
           :name        => "OCP",
           :schema      => TopologicalInventory::IngressApi::Client::Schema.new(:name => "Default"),
           :source      => source,
-          :collections => collections.values,
+          :collections => collections,
         )
       )
-
-      connection.send("watch_#{entity_type}", :resource_version => resource_version).each do |notice|
-        log.info("Caught a #{entity_type} watch notice for #{notice.object.metadata.name}")
-        parser.parse_notice(notice)
-      end
-    rescue => err
-      log.error(err)
     end
 
     def entity_types

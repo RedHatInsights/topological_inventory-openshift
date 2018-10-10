@@ -1,21 +1,19 @@
 module Openshift
   class Parser
-    class Template < Openshift::Parser
-      def parse(templates)
+    module Template
+      def parse_template(templates)
         templates.each { |template| parse_template(template) }
       end
 
       def parse_template(template)
-        collection.data << TopologicalInventory::IngressApi::Client::ContainerTemplate.new(
-          parse_base_item(template)
-        )
+        container_template = TopologicalInventory::IngressApi::Client::ContainerTemplate.new(parse_base_item(template))
+
+        collections[:container_templates] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :container_templates)
+        collections[:container_templates].data << container_template
       end
 
-      def parse_notice(notice)
-      end
-
-      def inventory_collection_name
-        :container_templates
+      def parse_template_notice(notice)
+        parse_template(notice.object)
       end
     end
   end

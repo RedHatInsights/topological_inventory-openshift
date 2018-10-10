@@ -8,11 +8,12 @@ require "openshift/parser/service_instance"
 
 module Openshift
   class Parser
-    class << self
-      def parser_klass_for(entity_type)
-        "Openshift::Parser::#{entity_type.classify}".constantize
-      end
-    end
+    include Openshift::Parser::Pod
+    include Openshift::Parser::Namespace
+    include Openshift::Parser::Template
+    include Openshift::Parser::ClusterServiceClass
+    include Openshift::Parser::ClusterServicePlan
+    include Openshift::Parser::ServiceInstance
 
     attr_accessor :collections
 
