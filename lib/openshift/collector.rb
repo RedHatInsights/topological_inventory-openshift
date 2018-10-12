@@ -127,7 +127,7 @@ module Openshift
     end
 
     def kubernetes_entity_types
-      %w(namespaces pods)
+      %w(namespaces pods nodes)
     end
 
     def openshift_entity_types

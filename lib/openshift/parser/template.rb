@@ -1,7 +1,7 @@
 module Openshift
   class Parser
     module Template
-      def parse_template(templates)
+      def parse_templates(templates)
         templates.each { |template| parse_template(template) }
       end
 

@@ -6,18 +6,10 @@ module Openshift
       end
 
       def parse_pod(pod)
-        container_project_lazy_link = TopologicalInventory::IngressApi::Client::InventoryObjectLazy.new(
-          :inventory_collection_name => :container_projects,
-          :reference                 => {
-            :name => pod.metadata.namespace
-          },
-          :ref                       => :by_name,
-        )
-
         container_group =  TopologicalInventory::IngressApi::Client::ContainerGroup.new(
           parse_base_item(pod).merge(
-            :ipaddress         => pod.status&.podIP,
-            :container_project => container_project_lazy_link,
+            :ipaddress      => pod.status&.podIP,
+            :container_node => lazy_find_node(pod.spec&.nodeName),
           )
         )
 
