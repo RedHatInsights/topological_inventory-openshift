@@ -3,6 +3,7 @@ module Openshift
     module ServiceInstance
       def parse_service_instances(service_instances)
         service_instances.each { |si| parse_service_instance(si) }
+        collections[:service_instances]
       end
 
       def parse_service_instance(service_instance)
@@ -12,7 +13,6 @@ module Openshift
           :source_created_at => service_instance.metadata.creationTimestamp,
         )
 
-        collections[:service_instances] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :service_instances)
         collections[:service_instances].data << service_instance
 
         service_instance

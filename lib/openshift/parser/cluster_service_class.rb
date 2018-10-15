@@ -3,6 +3,7 @@ module Openshift
     module ClusterServiceClass
       def parse_cluster_service_classes(cluster_service_classes)
         cluster_service_classes.each { |csc| parse_cluster_service_class(csc) }
+        collections[:service_offerings]
       end
 
       def parse_cluster_service_class(service_class)
@@ -13,7 +14,6 @@ module Openshift
           :source_created_at => service_class.metadata.creationTimestamp,
         )
 
-        collections[:service_offerings] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :service_offerings)
         collections[:service_offerings].data << service_offering
 
         service_offering

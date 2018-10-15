@@ -89,7 +89,8 @@ module Openshift
 
         resource_versions[entity_type] = entities.resourceVersion
 
-        parser.send("parse_#{entity_type}", entities)
+        collection = parser.send("parse_#{entity_type}", entities)
+        collection.all_manager_uuids = collection.data.map { |obj| {:source_ref => obj.source_ref} }
       end
 
       save_inventory(parser.collections.values)

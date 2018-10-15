@@ -3,6 +3,7 @@ module Openshift
     module ClusterServicePlan
       def parse_cluster_service_plans(cluster_service_plans)
         cluster_service_plans.each { |csp| parse_cluster_service_plan(csp) }
+        collections[:service_parameters_sets]
       end
 
       def parse_cluster_service_plan(service_plan)
@@ -13,7 +14,6 @@ module Openshift
           :source_created_at => service_plan.metadata.creationTimestamp,
         )
 
-        collections[:service_parameters_sets] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :service_parameters_sets)
         collections[:service_parameters_sets].data << service_parameters_set
 
         service_parameters_set

@@ -3,6 +3,7 @@ module Openshift
     module Pod
       def parse_pods(pods)
         pods.each { |pod| parse_pod(pod) }
+        collections[:container_groups]
       end
 
       def parse_pod(pod)
@@ -13,7 +14,6 @@ module Openshift
           )
         )
 
-        collections[:container_groups] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :container_groups)
         collections[:container_groups].data << container_group
 
         container_group

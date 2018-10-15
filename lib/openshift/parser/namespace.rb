@@ -3,6 +3,7 @@ module Openshift
     module Namespace
       def parse_namespaces(namespaces)
         namespaces.each { |ns| parse_namespace(ns) }
+        collections[:container_projects]
       end
 
       def parse_namespace(namespace)
@@ -13,7 +14,6 @@ module Openshift
           :source_created_at => namespace.metadata.creationTimestamp,
         )
 
-        collections[:container_projects] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :container_projects)
         collections[:container_projects].data << container_project
 
         container_project

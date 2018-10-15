@@ -3,12 +3,12 @@ module Openshift
     module Template
       def parse_templates(templates)
         templates.each { |template| parse_template(template) }
+        collections[:container_templates]
       end
 
       def parse_template(template)
         container_template = TopologicalInventory::IngressApi::Client::ContainerTemplate.new(parse_base_item(template))
 
-        collections[:container_templates] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :container_templates)
         collections[:container_templates].data << container_template
 
         container_template

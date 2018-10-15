@@ -5,6 +5,7 @@ module Openshift
     module Node
       def parse_nodes(nodes)
         nodes.each { |node| parse_node(node) }
+        collections[:container_nodes]
       end
 
       def parse_node(node)
@@ -23,7 +24,6 @@ module Openshift
           :source_created_at => node.metadata.creationTimestamp,
         )
 
-        collections[:container_nodes] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :container_nodes)
         collections[:container_nodes].data << container_node
 
         container_node
