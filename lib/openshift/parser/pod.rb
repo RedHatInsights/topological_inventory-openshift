@@ -15,10 +15,13 @@ module Openshift
 
         collections[:container_groups] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :container_groups)
         collections[:container_groups].data << container_group
+
+        container_group
       end
 
       def parse_pod_notice(notice)
-        parse_pod(notice.object)
+        container_group = parse_pod(notice.object)
+        archive_entity(container_group, notice.object) if notice.type == "DELETED"
       end
     end
   end

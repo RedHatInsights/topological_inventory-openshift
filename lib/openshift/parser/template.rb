@@ -10,10 +10,13 @@ module Openshift
 
         collections[:container_templates] ||= TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => :container_templates)
         collections[:container_templates].data << container_template
+
+        container_template
       end
 
       def parse_template_notice(notice)
-        parse_template(notice.object)
+        container_template = parse_template(notice.object)
+        archive_entity(container_template, notice.object) if notice.type == "DELETED"
       end
     end
   end

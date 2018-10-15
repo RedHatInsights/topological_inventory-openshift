@@ -25,18 +25,19 @@ module Openshift
 
     private
 
-    def collection
-      collections[inventory_collection_name] ||=
-        TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => inventory_collection_name)
-    end
-
     def parse_base_item(entity)
       {
-        :name              => entity.metadata.name,
-        :source_ref        => entity.metadata.uid,
-        :resource_version  => entity.metadata.resourceVersion,
         :container_project => lazy_find_namespace(entity.metadata&.namespace),
+        :name              => entity.metadata.name,
+        :resource_version  => entity.metadata.resourceVersion,
+        :source_created_at => entity.metadata.creationTimestamp,
+        :source_ref        => entity.metadata.uid,
       }
+    end
+
+    def archive_entity(inventory_object, entity)
+      source_deleted_at = entity.metadata&.deletionTimestamp || Time.now.utc
+      inventory_object.source_deleted_at = source_deleted_at
     end
 
     def lazy_find_namespace(name)
