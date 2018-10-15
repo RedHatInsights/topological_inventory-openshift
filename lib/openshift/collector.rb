@@ -131,7 +131,7 @@ module Openshift
     end
 
     def openshift_entity_types
-      %w()
+      %w(templates)
     end
 
     def servicecatalog_entity_types
