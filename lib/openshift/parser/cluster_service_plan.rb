@@ -9,7 +9,8 @@ module Openshift
       def parse_cluster_service_plan(service_plan)
         service_parameters_set = TopologicalInventory::IngressApi::Client::ServiceParametersSet.new(
           :source_ref        => service_plan.spec.externalID,
-          :name              => service_plan.metadata&.name,
+          :name              => service_plan.spec.externalName,
+          :description       => service_plan.spec.description,
           :resource_version  => service_plan.metadata&.resourceVersion,
           :source_created_at => service_plan.metadata.creationTimestamp,
         )
