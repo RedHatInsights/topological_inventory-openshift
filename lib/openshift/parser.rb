@@ -46,6 +46,14 @@ module Openshift
       inventory_object.source_deleted_at = source_deleted_at
     end
 
+    def lazy_find(collection, reference, ref: :manager_ref)
+      TopologicalInventory::IngressApi::Client::InventoryObjectLazy.new(
+        :inventory_collection_name => collection,
+        :reference                 => reference,
+        :ref                       => ref,
+      )
+    end
+
     def lazy_find_namespace(name)
       return if name.nil?
 
