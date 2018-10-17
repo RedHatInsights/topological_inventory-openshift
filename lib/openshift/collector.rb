@@ -5,21 +5,19 @@ require "topological_inventory/ingress_api/client"
 
 module Openshift
   class Collector
-    def initialize(source, openshift_host, openshift_token, batch_size: 1_000)
+    def initialize(source, openshift_host, openshift_token, batch_size: 1_000, poll_time: 5)
       self.batch_size        = batch_size
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.log               = Logger.new(STDOUT)
       self.openshift_host    = openshift_host
       self.openshift_token   = openshift_token
+      self.poll_time         = poll_time
       self.queue             = Queue.new
-      self.resource_versions = Concurrent::Map.new
       self.source            = source
     end
 
     def collect!
-      full_refresh
-
       start_collector_threads
 
       until finished? do
@@ -29,6 +27,8 @@ module Openshift
         notices << queue.pop until queue.empty?
 
         targeted_refresh(notices) unless notices.empty?
+
+        sleep(poll_time)
       end
     end
 
@@ -38,7 +38,8 @@ module Openshift
 
     private
 
-    attr_accessor :batch_size, :collector_threads, :finished, :log, :openshift_host, :openshift_token, :queue, :resource_versions, :source
+    attr_accessor :batch_size, :collector_threads, :finished, :log,
+                  :openshift_host, :openshift_token, :poll_time, :queue, :source
 
     def finished?
       finished.value
@@ -58,15 +59,16 @@ module Openshift
       connection = connection_for_entity_type(entity_type)
 
       Thread.new do
-        collector_thread(connection, entity_type, resource_versions[entity_type])
+        collector_thread(connection, entity_type)
       end
     rescue => err
       log.error(err)
       nil
     end
 
-    def collector_thread(connection, entity_type, resource_version)
-      resource_version ||= "0"
+    def collector_thread(connection, entity_type)
+      resource_version = full_refresh(connection, entity_type)
+
       watch(connection, entity_type, resource_version) do |notice|
         log.info("#{entity_type} #{notice.object.metadata.name} was #{notice.type.downcase}")
         queue.push(notice)
@@ -79,30 +81,30 @@ module Openshift
       connection.send("watch_#{entity_type}", :resource_version => resource_version).each { |notice| yield notice }
     end
 
-    def full_refresh
-      entity_types.each do |entity_type|
-        entities = connection_for_entity_type(entity_type).send("get_#{entity_type}")
-        next if entities.nil?
+    def full_refresh(connection, entity_type)
+      entities = connection.send("get_#{entity_type}")
+      return if entities.nil?
 
-        log.info("Retrieved #{entities.count} #{entity_type}...")
+      log.info("Retrieved #{entities.count} #{entity_type}...")
 
-        resource_versions[entity_type] = entities.resourceVersion
+      resource_version = entities.resourceVersion
 
-        batch_index = 1
-        batch_count = (entities.count / batch_size.to_f).ceil
+      batch_index = 1
+      batch_count = (entities.count / batch_size.to_f).ceil
 
-        all_manager_uuids = []
+      all_manager_uuids = []
 
-        entities.each_slice(batch_size) do |entity_batch|
-          parser = Openshift::Parser.new
-          collection = parser.send("parse_#{entity_type}", entity_batch)
+      entities.each_slice(batch_size) do |entity_batch|
+        parser = Openshift::Parser.new
+        collection = parser.send("parse_#{entity_type}", entity_batch)
 
-          all_manager_uuids.concat(collection.data.map { |obj| {:source_ref => obj.source_ref} })
-          collection.all_manager_uuids = all_manager_uuids if batch_index == batch_count
+        all_manager_uuids.concat(collection.data.map { |obj| {:source_ref => obj.source_ref} })
+        collection.all_manager_uuids = all_manager_uuids if batch_index == batch_count
 
-          save_inventory(parser.collections.values)
-        end
+        save_inventory(parser.collections.values)
       end
+
+      resource_version
     end
 
     def targeted_refresh(notices)
