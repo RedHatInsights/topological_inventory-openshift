@@ -79,8 +79,6 @@ module Openshift
     end
 
     def full_refresh
-      parser = Openshift::Parser.new
-
       entity_types.each do |entity_type|
         entities = connection_for_entity_type(entity_type).send("get_#{entity_type}")
         next if entities.nil?
@@ -89,11 +87,11 @@ module Openshift
 
         resource_versions[entity_type] = entities.resourceVersion
 
+        parser = Openshift::Parser.new
         collection = parser.send("parse_#{entity_type}", entities)
         collection.all_manager_uuids = collection.data.map { |obj| {:source_ref => obj.source_ref} }
+        save_inventory(parser.collections.values)
       end
-
-      save_inventory(parser.collections.values)
     end
 
     def targeted_refresh(notices)
