@@ -12,7 +12,7 @@ module Openshift
         node_status = node.status
         if node_status
           cpus = node_status.capacity&.cpu
-          memory = parse_capacity_field("Node-Memory", node_status.capacity&.memory)
+          memory = node_status.capacity&.memory&.iec_60027_2_to_i
         end
 
         container_node =  TopologicalInventory::IngressApi::Client::ContainerNode.new(
@@ -32,17 +32,6 @@ module Openshift
       def parse_node_notice(notice)
         container_node = parse_node(notice.object)
         archive_entity(container_node, notice.object) if notice.type == "DELETED"
-      end
-
-      private
-
-      def parse_capacity_field(key, val)
-        return nil unless val
-        begin
-          val.iec_60027_2_to_i
-        rescue ArgumentError
-          nil
-        end
       end
     end
   end
