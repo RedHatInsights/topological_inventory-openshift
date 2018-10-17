@@ -7,10 +7,18 @@ module Openshift
       end
 
       def parse_service_instance(service_instance)
+        cluster_service_class_name = service_instance.spec&.clusterServiceClassRef&.name
+        cluster_service_plan_name  = service_instance.spec&.clusterServicePlanRef&.name
+
+        service_offering       = lazy_find(:service_offerings, :source_ref => cluster_service_class_name) if cluster_service_class_name
+        service_parameters_set = lazy_find(:service_parameters_sets, :source_ref => cluster_service_plan_name) if cluster_service_plan_name
+
         service_instance = TopologicalInventory::IngressApi::Client::ServiceInstance.new(
-          :source_ref        => service_instance.spec.externalID,
-          :name              => service_instance.metadata.name,
-          :source_created_at => service_instance.metadata.creationTimestamp,
+          :source_ref             => service_instance.spec.externalID,
+          :name                   => service_instance.spec.externalName,
+          :source_created_at      => service_instance.metadata.creationTimestamp,
+          :service_offering       => service_offering,
+          :service_parameters_set => service_parameters_set,
         )
 
         collections[:service_instances].data << service_instance
