@@ -5,7 +5,8 @@ require "topological_inventory/ingress_api/client"
 
 module Openshift
   class Collector
-    def initialize(source, openshift_host, openshift_token)
+    def initialize(source, openshift_host, openshift_token, batch_size: 1_000)
+      self.batch_size        = batch_size
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.log               = Logger.new(STDOUT)
@@ -37,7 +38,7 @@ module Openshift
 
     private
 
-    attr_accessor :collector_threads, :finished, :log, :openshift_host, :openshift_token, :queue, :resource_versions, :source
+    attr_accessor :batch_size, :collector_threads, :finished, :log, :openshift_host, :openshift_token, :queue, :resource_versions, :source
 
     def finished?
       finished.value
@@ -87,10 +88,20 @@ module Openshift
 
         resource_versions[entity_type] = entities.resourceVersion
 
-        parser = Openshift::Parser.new
-        collection = parser.send("parse_#{entity_type}", entities)
-        collection.all_manager_uuids = collection.data.map { |obj| {:source_ref => obj.source_ref} }
-        save_inventory(parser.collections.values)
+        batch_index = 1
+        batch_count = (entities.count / batch_size.to_f).ceil
+
+        all_manager_uuids = []
+
+        entities.each_slice(batch_size) do |entity_batch|
+          parser = Openshift::Parser.new
+          collection = parser.send("parse_#{entity_type}", entity_batch)
+
+          all_manager_uuids.concat(collection.data.map { |obj| {:source_ref => obj.source_ref} })
+          collection.all_manager_uuids = all_manager_uuids if batch_index == batch_count
+
+          save_inventory(parser.collections.values)
+        end
       end
     end
 
