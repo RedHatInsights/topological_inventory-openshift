@@ -7,7 +7,11 @@ module Openshift
       end
 
       def parse_template(template)
-        container_template = TopologicalInventory::IngressApi::Client::ContainerTemplate.new(parse_base_item(template))
+        container_template = TopologicalInventory::IngressApi::Client::ContainerTemplate.new(
+          parse_base_item(template).merge(
+            :container_project => lazy_find_namespace(template.metadata&.namespace)
+          )
+        )
 
         collections[:container_templates].data << container_template
 

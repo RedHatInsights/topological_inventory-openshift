@@ -9,8 +9,9 @@ module Openshift
       def parse_pod(pod)
         container_group =  TopologicalInventory::IngressApi::Client::ContainerGroup.new(
           parse_base_item(pod).merge(
-            :ipaddress      => pod.status&.podIP,
-            :container_node => lazy_find_node(pod.spec&.nodeName),
+            :ipaddress         => pod.status&.podIP,
+            :container_node    => lazy_find_node(pod.spec&.nodeName),
+            :container_project => lazy_find_namespace(pod.metadata&.namespace),
           )
         )
 

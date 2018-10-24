@@ -33,7 +33,6 @@ module Openshift
 
     def parse_base_item(entity)
       {
-        :container_project => lazy_find_namespace(entity.metadata&.namespace),
         :name              => entity.metadata.name,
         :resource_version  => entity.metadata.resourceVersion,
         :source_created_at => entity.metadata.creationTimestamp,

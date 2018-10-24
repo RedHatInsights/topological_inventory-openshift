@@ -8,10 +8,7 @@ module Openshift
 
       def parse_namespace(namespace)
         container_project = TopologicalInventory::IngressApi::Client::ContainerProject.new(
-          :name              => namespace.metadata.name,
-          :source_ref        => namespace.metadata.uid,
-          :resource_version  => namespace.metadata.resourceVersion,
-          :source_created_at => namespace.metadata.creationTimestamp,
+          parse_base_item(namespace)
         )
 
         collections[:container_projects].data << container_project
