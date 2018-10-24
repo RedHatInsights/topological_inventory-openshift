@@ -9,19 +9,16 @@ module Openshift
       end
 
       def parse_node(node)
-        node_status = node.status
-        if node_status
-          cpus = node_status.capacity&.cpu
-          memory = node_status.capacity&.memory&.iec_60027_2_to_i
+        if node.status
+          cpus = node.status.capacity&.cpu
+          memory = node.status.capacity&.memory&.iec_60027_2_to_i
         end
 
-        container_node =  TopologicalInventory::IngressApi::Client::ContainerNode.new(
-          :source_ref        => node.metadata.uid,
-          :name              => node.metadata.name,
-          :resource_version  => node.metadata.resourceVersion,
-          :cpus              => cpus,
-          :memory            => memory,
-          :source_created_at => node.metadata.creationTimestamp,
+        container_node = TopologicalInventory::IngressApi::Client::ContainerNode.new(
+          parse_base_item(node).merge(
+            :cpus   => cpus,
+            :memory => memory,
+          )
         )
 
         collections[:container_nodes].data << container_node
