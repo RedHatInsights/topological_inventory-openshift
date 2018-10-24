@@ -22,7 +22,7 @@ module Openshift
     def initialize
       entity_types = [:container_groups, :container_nodes, :container_projects,
                       :container_templates, :service_instances, :service_offerings,
-                      :service_parameters_sets]
+                      :service_plans]
 
       self.collections = entity_types.each_with_object({}).each do |entity_type, collections|
         collections[entity_type] = TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => entity_type)
