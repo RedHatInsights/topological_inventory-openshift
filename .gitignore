@@ -27,6 +27,7 @@ build/
 
 ## Environment normalization:
 /.bundle/
+bundler.d/*
 /vendor/bundle
 /lib/bundler/man/
 
