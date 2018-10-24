@@ -25,6 +25,9 @@ build/
 /doc/
 /rdoc/
 
+## RubyMine
+/.idea/
+
 ## Environment normalization:
 /.bundle/
 /vendor/bundle
