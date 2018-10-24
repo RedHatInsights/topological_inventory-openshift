@@ -3,14 +3,14 @@ module Openshift
     module ClusterServicePlan
       def parse_cluster_service_plans(cluster_service_plans)
         cluster_service_plans.each { |csp| parse_cluster_service_plan(csp) }
-        collections[:service_parameters_sets]
+        collections[:service_plans]
       end
 
       def parse_cluster_service_plan(service_plan)
         cluster_service_class_name = service_plan.spec&.clusterServiceClassRef&.name
         service_offering = lazy_find(:service_offerings, :source_ref => service_plan&.spec&.clusterServiceClassRef&.name) if cluster_service_class_name
 
-        service_parameters_set = TopologicalInventory::IngressApi::Client::ServiceParametersSet.new(
+        service_plan_data = TopologicalInventory::IngressApi::Client::ServicePlan.new(
           :source_ref        => service_plan.spec.externalID,
           :name              => service_plan.spec.externalName,
           :description       => service_plan.spec.description,
@@ -20,9 +20,9 @@ module Openshift
           :service_offering  => service_offering,
         )
 
-        collections[:service_parameters_sets].data << service_parameters_set
+        collections[:service_plans].data << service_plan_data
 
-        service_parameters_set
+        service_plan_data
       end
 
       def parse_cluster_service_plan_notice(notice)
