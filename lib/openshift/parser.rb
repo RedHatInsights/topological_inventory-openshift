@@ -17,13 +17,14 @@ module Openshift
     include Openshift::Parser::ClusterServicePlan
     include Openshift::Parser::ServiceInstance
 
-    attr_accessor :collections
+    attr_accessor :collections, :resource_timestamp
 
     def initialize
       entity_types = [:container_groups, :container_nodes, :container_projects,
                       :container_templates, :service_instances, :service_offerings,
                       :service_plans]
 
+      self.resource_timestamp = Time.now.utc
       self.collections = entity_types.each_with_object({}).each do |entity_type, collections|
         collections[entity_type] = TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => entity_type)
       end
@@ -33,10 +34,11 @@ module Openshift
 
     def parse_base_item(entity)
       {
-        :name              => entity.metadata.name,
-        :resource_version  => entity.metadata.resourceVersion,
-        :source_created_at => entity.metadata.creationTimestamp,
-        :source_ref        => entity.metadata.uid,
+        :name               => entity.metadata.name,
+        :resource_version   => entity.metadata.resourceVersion,
+        :resource_timestamp => resource_timestamp,
+        :source_created_at  => entity.metadata.creationTimestamp,
+        :source_ref         => entity.metadata.uid,
       }
     end
 
