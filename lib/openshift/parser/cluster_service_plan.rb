@@ -26,8 +26,8 @@ module Openshift
       end
 
       def parse_cluster_service_plan_notice(notice)
-        service_parameters_set = parse_cluster_service_plan(notice.object)
-        archive_entity(service_parameters_set, notice.object) if notice.type == "DELETED"
+        service_plan = parse_cluster_service_plan(notice.object)
+        archive_entity(service_plan, notice.object) if notice.type == "DELETED"
       end
     end
   end
