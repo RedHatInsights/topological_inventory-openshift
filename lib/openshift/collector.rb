@@ -1,4 +1,3 @@
-require "byebug"
 require "concurrent"
 require "openshift/connection"
 require "openshift/parser"
@@ -103,10 +102,10 @@ module Openshift
         collection = parser.send("parse_#{entity_type}", result)
 
         all_manager_uuids.concat(collection.data.map { |obj| {:source_ref => obj.source_ref} })
-        collection.all_manager_uuids = all_manager_uuids if result.continue.nil?
+        collection.all_manager_uuids = all_manager_uuids if result.last?
 
         save_inventory(parser.collections.values)
-      end until result.continue.nil?
+      end until result.last?
 
       log.info("Collecting #{entity_type}...Complete - Count [#{all_manager_uuids.count}]")
       resource_version
