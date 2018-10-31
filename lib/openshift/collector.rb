@@ -82,30 +82,28 @@ module Openshift
     end
 
     def full_refresh(connection, entity_type)
-      continue = nil
+      resource_version = continue = nil
       all_manager_uuids = []
 
       log.info("Collecting #{entity_type}...")
 
-      begin
-        options = {}
-        options[:limit]    = limits[entity_type]
-        options[:continue] = continue if continue
+      loop do
+        entities = connection.send("get_#{entity_type}", :limit => limits[entity_type], :continue => continue)
+        break if entities.nil?
 
-        result = connection.send("get_#{entity_type}", options)
-        break if result.nil?
-
-        continue         = result.continue
-        resource_version = result.resourceVersion
+        continue         = entities.continue
+        resource_version = entities.resourceVersion
 
         parser = Openshift::Parser.new
-        collection = parser.send("parse_#{entity_type}", result)
+        collection = parser.send("parse_#{entity_type}", entities)
 
         all_manager_uuids.concat(collection.data.map { |obj| {:source_ref => obj.source_ref} })
-        collection.all_manager_uuids = all_manager_uuids if result.last?
+        collection.all_manager_uuids = all_manager_uuids if entities.last?
 
         save_inventory(parser.collections.values)
-      end until result.last?
+
+        break if entities.last?
+      end
 
       log.info("Collecting #{entity_type}...Complete - Count [#{all_manager_uuids.count}]")
       resource_version
