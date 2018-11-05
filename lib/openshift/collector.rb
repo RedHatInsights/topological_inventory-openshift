@@ -5,10 +5,10 @@ require "topological_inventory/ingress_api/client"
 
 module Openshift
   class Collector
-    def initialize(source, openshift_host, openshift_token, batch_size: 1_000, poll_time: 5)
-      self.batch_size        = batch_size
+    def initialize(source, openshift_host, openshift_token, default_limit: 1_000, poll_time: 5)
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
+      self.limits            = Hash.new(default_limit)
       self.log               = Logger.new(STDOUT)
       self.openshift_host    = openshift_host
       self.openshift_token   = openshift_token
@@ -38,7 +38,7 @@ module Openshift
 
     private
 
-    attr_accessor :batch_size, :collector_threads, :finished, :log,
+    attr_accessor :collector_threads, :finished, :limits, :log,
                   :openshift_host, :openshift_token, :poll_time, :queue, :source
 
     def finished?
@@ -82,28 +82,30 @@ module Openshift
     end
 
     def full_refresh(connection, entity_type)
-      entities = connection.send("get_#{entity_type}")
-      return if entities.nil?
-
-      log.info("Retrieved #{entities.count} #{entity_type}...")
-
-      resource_version = entities.resourceVersion
-
-      batch_index = 1
-      batch_count = (entities.count / batch_size.to_f).ceil
-
+      resource_version = continue = nil
       all_manager_uuids = []
 
-      entities.each_slice(batch_size) do |entity_batch|
+      log.info("Collecting #{entity_type}...")
+
+      loop do
+        entities = connection.send("get_#{entity_type}", :limit => limits[entity_type], :continue => continue)
+        break if entities.nil?
+
+        continue         = entities.continue
+        resource_version = entities.resourceVersion
+
         parser = Openshift::Parser.new
-        collection = parser.send("parse_#{entity_type}", entity_batch)
+        collection = parser.send("parse_#{entity_type}", entities)
 
         all_manager_uuids.concat(collection.data.map { |obj| {:source_ref => obj.source_ref} })
-        collection.all_manager_uuids = all_manager_uuids if batch_index == batch_count
+        collection.all_manager_uuids = all_manager_uuids if entities.last?
 
         save_inventory(parser.collections.values)
+
+        break if entities.last?
       end
 
+      log.info("Collecting #{entity_type}...Complete - Count [#{all_manager_uuids.count}]")
       resource_version
     end
 

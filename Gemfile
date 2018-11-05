@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gem "activesupport"
 gem "concurrent-ruby"
-gem "kubeclient"
+gem "kubeclient", :git => "https://github.com/abonas/kubeclient", :branch => "master"
 gem "optimist"
 gem "topological_inventory-ingress_api-client", :git => "https://github.com/ManageIQ/topological_inventory-ingress_api-client-ruby", :branch => "master"
 gem "more_core_extensions"
