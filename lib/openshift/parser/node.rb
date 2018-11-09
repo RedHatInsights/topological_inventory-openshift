@@ -1,5 +1,3 @@
-require "more_core_extensions/core_ext/string/iec60027_2"
-
 module Openshift
   class Parser
     module Node
@@ -11,7 +9,7 @@ module Openshift
       def parse_node(node)
         if node.status
           cpus = node.status.capacity&.cpu
-          memory = node.status.capacity&.memory&.iec_60027_2_to_i
+          memory = parse_quantity(node.status.capacity&.memory)
         end
 
         container_node = TopologicalInventory::IngressApi::Client::ContainerNode.new(

@@ -1,4 +1,6 @@
 require "active_support/inflector"
+require "more_core_extensions/core_ext/string/iec60027_2"
+require "more_core_extensions/core_ext/string/decimal_suffix"
 require "openshift/parser/pod"
 require "openshift/parser/namespace"
 require "openshift/parser/node"
@@ -20,7 +22,7 @@ module Openshift
     attr_accessor :collections, :resource_timestamp
 
     def initialize
-      entity_types = [:container_groups, :container_nodes, :container_projects,
+      entity_types = [:containers, :container_groups, :container_nodes, :container_projects,
                       :container_templates, :service_instances, :service_offerings, :service_plans]
 
       self.resource_timestamp = Time.now.utc
@@ -72,6 +74,16 @@ module Openshift
         :reference                 => {:name => name},
         :ref                       => :by_name,
       )
+    end
+
+    def parse_quantity(quantity)
+      return if quantity.nil?
+
+      begin
+        quantity.iec_60027_2_to_i
+      rescue
+        quantity.decimal_si_to_f
+      end
     end
   end
 end
