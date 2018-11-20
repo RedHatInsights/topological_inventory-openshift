@@ -16,6 +16,7 @@ module Openshift
           parse_base_item(node).merge(
             :cpus   => cpus,
             :memory => memory,
+            :lives_on => vm_cross_link(node.spec.providerID),
           )
         )
 
@@ -27,6 +28,12 @@ module Openshift
       def parse_node_notice(notice)
         container_node = parse_node(notice.object)
         archive_entity(container_node, notice.object) if notice.type == "DELETED"
+      end
+
+      def vm_cross_link(provider_id)
+        return if provider_id.nil?
+
+        lazy_find(:cross_link_vms, {:uid_ems => provider_id})
       end
     end
   end
