@@ -83,10 +83,11 @@ module Openshift
 
     def full_refresh(connection, entity_type)
       resource_version = continue = nil
-      all_manager_uuids = []
 
-      log.info("Collecting #{entity_type}...")
+      refresh_state_uuid = SecureRandom.uuid
+      log.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
+      total_parts = 0
       loop do
         entities = connection.send("get_#{entity_type}", :limit => limits[entity_type], :continue => continue)
         break if entities.nil?
@@ -95,18 +96,29 @@ module Openshift
         resource_version = entities.resourceVersion
 
         parser = Openshift::Parser.new
-        collection = parser.send("parse_#{entity_type}", entities)
+        parser.send("parse_#{entity_type}", entities)
 
-        all_manager_uuids.concat(collection.data.map { |obj| {:source_ref => obj.source_ref} })
-        collection.all_manager_uuids = all_manager_uuids if entities.last?
-
-        save_inventory(parser.collections.values)
+        refresh_state_part_uuid = SecureRandom.uuid
+        total_parts += 1
+        save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
 
         break if entities.last?
       end
 
-      log.info("Collecting #{entity_type}...Complete - Count [#{all_manager_uuids.count}]")
+      log.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete - Parts [#{total_parts}]")
+
+      log.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
+
+      parser = Openshift::Parser.new
+      collection = parser.send("parse_#{entity_type}", [])
+
+      sweep_inventory(refresh_state_uuid, total_parts, [collection.name])
+
+      log.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
+    rescue => e
+      log.error("Error collecting :#{entity_type}, message => #{e.message}")
+      raise e
     end
 
     def targeted_refresh(notices)
@@ -123,15 +135,31 @@ module Openshift
       save_inventory(parser.collections.values)
     end
 
-    def save_inventory(collections)
+    def save_inventory(collections, refresh_state_uuid=nil, refresh_state_part_uuid=nil)
       return if collections.empty?
 
       ingress_api_client.save_inventory(
         :inventory => TopologicalInventory::IngressApi::Client::Inventory.new(
-          :name        => "OCP",
-          :schema      => TopologicalInventory::IngressApi::Client::Schema.new(:name => "Default"),
-          :source      => source,
-          :collections => collections,
+          :name                    => "OCP",
+          :schema                  => TopologicalInventory::IngressApi::Client::Schema.new(:name => "Default"),
+          :source                  => source,
+          :collections             => collections,
+          :refresh_state_uuid      => refresh_state_uuid,
+          :refresh_state_part_uuid => refresh_state_part_uuid,
+        )
+      )
+    end
+
+    def sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
+      ingress_api_client.save_inventory(
+        :inventory => TopologicalInventory::IngressApi::Client::Inventory.new(
+          :name               => "OCP",
+          :schema             => TopologicalInventory::IngressApi::Client::Schema.new(:name => "Default"),
+          :source             => source,
+          :collections        => [],
+          :refresh_state_uuid => refresh_state_uuid,
+          :total_parts        => total_parts,
+          :sweep_scope        => sweep_scope,
         )
       )
     end
