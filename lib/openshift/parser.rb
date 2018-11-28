@@ -1,6 +1,7 @@
 require "active_support/inflector"
 require "more_core_extensions/core_ext/string/iec60027_2"
 require "more_core_extensions/core_ext/string/decimal_suffix"
+require "openshift/parser/image"
 require "openshift/parser/pod"
 require "openshift/parser/namespace"
 require "openshift/parser/node"
@@ -11,6 +12,7 @@ require "openshift/parser/service_instance"
 
 module Openshift
   class Parser
+    include Openshift::Parser::Image
     include Openshift::Parser::Pod
     include Openshift::Parser::Namespace
     include Openshift::Parser::Node
@@ -22,7 +24,7 @@ module Openshift
     attr_accessor :collections, :resource_timestamp
 
     def initialize
-      entity_types = [:containers, :container_groups, :container_nodes, :container_projects,
+      entity_types = [:containers, :container_groups, :container_nodes, :container_projects, :container_images,
                       :container_templates, :service_instances, :service_offerings, :service_plans]
 
       self.resource_timestamp = Time.now.utc
