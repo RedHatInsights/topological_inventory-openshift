@@ -19,6 +19,8 @@ module Openshift
 
         collections[:container_groups].data << container_group
         collections[:containers].data.concat(parse_containers(pod))
+        parse_pod_tags(container_group.source_ref, pod.metadata&.labels&.to_h)
+        parse_pod_tags(container_group.source_ref, pod.entity&.spec&.nodeSelector&.to_h)
 
         container_group
       end
@@ -26,6 +28,18 @@ module Openshift
       def parse_pod_notice(notice)
         container_group = parse_pod(notice.object)
         archive_entity(container_group, notice.object) if notice.type == "DELETED"
+      end
+
+      private
+
+      def parse_pod_tags(source_ref, tags)
+        (tags || {}).each do |key, value|
+          collections[:container_group_tags].data << TopologicalInventory::IngressApi::Client::ContainerGroupTag.new(
+            :container_group => lazy_find(:container_groups, :source_ref => source_ref),
+            :tag           => lazy_find(:tags, :name => key),
+            :value         => value,
+          )
+        end
       end
 
       def parse_containers(pod)

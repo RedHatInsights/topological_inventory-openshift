@@ -25,7 +25,9 @@ module Openshift
 
     def initialize
       entity_types = [:containers, :container_groups, :container_nodes, :container_projects, :container_images,
-                      :container_templates, :service_instances, :service_offerings, :service_plans]
+                      :container_templates, :service_instances, :service_offerings, :service_plans,
+                      :container_group_tags, :container_node_tags, :container_project_tags, :container_image_tags,
+                      :container_template_tags]
 
       self.resource_timestamp = Time.now.utc
       self.collections = entity_types.each_with_object({}).each do |entity_type, collections|
