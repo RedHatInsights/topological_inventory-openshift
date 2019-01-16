@@ -12,6 +12,11 @@ module Openshift
           :name              => service_class.spec&.externalName,
           :description       => service_class.spec&.description,
           :source_created_at => service_class.metadata.creationTimestamp,
+          :display_name      => service_class.spec&.externalMetadata&.displayName,
+          :documentation_url => service_class.spec&.externalMetadata&.documentationUrl,
+          :long_description  => service_class.spec&.externalMetadata&.longDescription,
+          :distributor       => service_class.spec&.externalMetadata&.providerDisplayName,
+          :support_url       => service_class.spec&.externalMetadata&.supportUrl,
         )
 
         collections[:service_offerings].data << service_offering
