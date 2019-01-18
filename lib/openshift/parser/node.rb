@@ -21,6 +21,7 @@ module Openshift
         )
 
         collections[:container_nodes].data << container_node
+        parse_node_tags(container_node.source_ref, node.metadata&.labels&.to_h)
 
         container_node
       end
@@ -28,6 +29,18 @@ module Openshift
       def parse_node_notice(notice)
         container_node = parse_node(notice.object)
         archive_entity(container_node, notice.object) if notice.type == "DELETED"
+      end
+      
+      private
+
+      def parse_node_tags(source_ref, tags)
+        (tags || {}).each do |key, value|
+          collections[:container_node_tags].data << TopologicalInventory::IngressApi::Client::ContainerNodeTag.new(
+            :container_node => lazy_find(:container_nodes, :source_ref => source_ref),
+            :tag            => lazy_find(:tags, :name => key),
+            :value          => value,
+          )
+        end
       end
 
       def vm_cross_link(provider_id)

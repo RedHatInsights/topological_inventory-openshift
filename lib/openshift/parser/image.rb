@@ -16,6 +16,8 @@ module Openshift
         )
 
         collections[:container_images].data << container_image
+        parse_image_tags(container_image.source_ref, image.metadata&.labels&.to_h)
+        parse_image_tags(container_image.source_ref, image.dockerImageMetadata&.Config&.Labels&.to_h)
 
         container_image
       end
@@ -26,6 +28,16 @@ module Openshift
       end
 
       private
+
+      def parse_image_tags(source_ref, tags)
+        (tags || {}).each do |key, value|
+          collections[:container_image_tags].data << TopologicalInventory::IngressApi::Client::ContainerImageTag.new(
+            :container_image => lazy_find(:container_images, :source_ref => source_ref),
+            :tag             => lazy_find(:tags, :name => key),
+            :value           => value,
+          )
+        end
+      end
 
       def parse_image_name(image)
         docker_pullable_re = %r{
