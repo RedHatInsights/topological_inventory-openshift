@@ -20,6 +20,7 @@ module Openshift
         )
 
         collections[:service_offerings].data << service_offering
+        parse_service_offering_tags(service_offering.source_ref, service_class.spec&.tags)
 
         service_offering
       end
@@ -27,6 +28,20 @@ module Openshift
       def parse_cluster_service_class_notice(notice)
         service_offering = parse_cluster_service_class(notice.object)
         archive_entity(service_offering, notice.object) if notice.type == "DELETED"
+      end
+
+      private
+
+      def parse_service_offering_tags(source_ref, tags)
+        (tags || []).each do |key|
+          next if key.empty?
+
+          collections[:service_offering_tags].data << TopologicalInventory::IngressApi::Client::ServiceOfferingTag.new(
+            :service_offering => lazy_find(:service_offerings, :source_ref => source_ref),
+            :tag              => lazy_find(:tags, :name => key),
+            :value            => '',
+          )
+        end
       end
     end
   end
