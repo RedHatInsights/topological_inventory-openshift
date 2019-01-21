@@ -21,18 +21,20 @@ module Openshift
     include Openshift::Parser::ClusterServicePlan
     include Openshift::Parser::ServiceInstance
 
-    attr_accessor :collections, :resource_timestamp
+    attr_accessor :collections, :resource_timestamp, :openshift_host, :openshift_port
 
-    def initialize
+    def initialize(openshift_host:, openshift_port: 8443 )
       entity_types = [:containers, :container_groups, :container_nodes, :container_projects, :container_images,
                       :container_templates, :service_instances, :service_offerings, :service_plans,
                       :container_group_tags, :container_node_tags, :container_project_tags, :container_image_tags,
-                      :container_template_tags, :service_offering_tags]
+                      :container_template_tags, :service_offering_tags, :service_offering_icons]
 
       self.resource_timestamp = Time.now.utc
       self.collections = entity_types.each_with_object({}).each do |entity_type, collections|
         collections[entity_type] = TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => entity_type, :data => [])
       end
+      self.openshift_host = openshift_host
+      self.openshift_port = openshift_port
     end
 
     private
