@@ -65,7 +65,9 @@ module Openshift
         http.use_ssl     = true
         http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         request          = Net::HTTP::Get.new(uri.path)
-        http.request(request).body
+        body = http.request(request).body
+        return unless body.starts_with?("<svg") # We allow only svg icons
+        body
       end
 
       def parse_service_offering_tags(source_ref, tags)
