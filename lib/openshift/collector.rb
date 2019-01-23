@@ -95,7 +95,7 @@ module Openshift
         continue         = entities.continue
         resource_version = entities.resourceVersion
 
-        parser = Openshift::Parser.new
+        parser = Openshift::Parser.new(:openshift_host => openshift_host)
         parser.send("parse_#{entity_type}", entities)
 
         refresh_state_part_uuid = SecureRandom.uuid
@@ -109,7 +109,7 @@ module Openshift
 
       log.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
-      parser = Openshift::Parser.new
+      parser = Openshift::Parser.new(:openshift_host => openshift_host)
       collection = parser.send("parse_#{entity_type}", [])
 
       sweep_inventory(refresh_state_uuid, total_parts, [collection.name])
@@ -122,7 +122,7 @@ module Openshift
     end
 
     def targeted_refresh(notices)
-      parser = Openshift::Parser.new
+      parser = Openshift::Parser.new(:openshift_host => openshift_host)
 
       notices.each do |notice|
         entity_type = notice.object&.kind&.underscore
