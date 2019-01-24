@@ -66,7 +66,7 @@ module Openshift
         http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         request          = Net::HTTP::Get.new(uri.path)
         body = http.request(request).body
-        return unless body.starts_with?("<svg") # We allow only svg icons
+        return unless body.start_with?("<svg") # We allow only svg icons
         body
       end
 
