@@ -9,7 +9,7 @@ module Openshift
       end
 
       def parse_pod(pod)
-        container_group =  TopologicalInventory::IngressApi::Client::ContainerGroup.new(
+        container_group =  TopologicalInventoryIngressApiClient::ContainerGroup.new(
           parse_base_item(pod).merge(
             :ipaddress         => pod.status&.podIP,
             :container_node    => lazy_find_node(pod.spec&.nodeName),
@@ -34,7 +34,7 @@ module Openshift
 
       def parse_pod_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_group_tags].data << TopologicalInventory::IngressApi::Client::ContainerGroupTag.new(
+          collections[:container_group_tags].data << TopologicalInventoryIngressApiClient::ContainerGroupTag.new(
             :container_group => lazy_find(:container_groups, :source_ref => source_ref),
             :tag           => lazy_find(:tags, :name => key),
             :value         => value,
@@ -44,7 +44,7 @@ module Openshift
 
       def parse_containers(pod)
         pod.spec.containers.map do |container|
-          TopologicalInventory::IngressApi::Client::Container.new(
+          TopologicalInventoryIngressApiClient::Container.new(
             :container_group    => lazy_find(:container_groups, {:source_ref => pod.metadata.uid}),
             :name               => container.name,
             :resource_timestamp => resource_timestamp,

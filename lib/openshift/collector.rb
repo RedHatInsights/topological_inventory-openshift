@@ -1,7 +1,7 @@
 require "concurrent"
 require "openshift/connection"
 require "openshift/parser"
-require "topological_inventory/ingress_api/client"
+require "topological_inventory-ingress_api-client"
 
 module Openshift
   class Collector
@@ -139,9 +139,9 @@ module Openshift
       return if collections.empty?
 
       ingress_api_client.save_inventory(
-        :inventory => TopologicalInventory::IngressApi::Client::Inventory.new(
+        :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
           :name                    => "OCP",
-          :schema                  => TopologicalInventory::IngressApi::Client::Schema.new(:name => "Default"),
+          :schema                  => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
           :source                  => source,
           :collections             => collections,
           :refresh_state_uuid      => refresh_state_uuid,
@@ -152,9 +152,9 @@ module Openshift
 
     def sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
       ingress_api_client.save_inventory(
-        :inventory => TopologicalInventory::IngressApi::Client::Inventory.new(
+        :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
           :name               => "OCP",
-          :schema             => TopologicalInventory::IngressApi::Client::Schema.new(:name => "Default"),
+          :schema             => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
           :source             => source,
           :collections        => [],
           :refresh_state_uuid => refresh_state_uuid,
@@ -204,7 +204,7 @@ module Openshift
     end
 
     def ingress_api_client
-      TopologicalInventory::IngressApi::Client::AdminsApi.new
+      TopologicalInventoryIngressApiClient::DefaultApi.new
     end
   end
 end

@@ -31,7 +31,7 @@ module Openshift
 
       self.resource_timestamp = Time.now.utc
       self.collections = entity_types.each_with_object({}).each do |entity_type, collections|
-        collections[entity_type] = TopologicalInventory::IngressApi::Client::InventoryCollection.new(:name => entity_type, :data => [])
+        collections[entity_type] = TopologicalInventoryIngressApiClient::InventoryCollection.new(:name => entity_type, :data => [])
       end
       self.openshift_host = openshift_host
       self.openshift_port = openshift_port
@@ -55,7 +55,7 @@ module Openshift
     end
 
     def lazy_find(collection, reference, ref: :manager_ref)
-      TopologicalInventory::IngressApi::Client::InventoryObjectLazy.new(
+      TopologicalInventoryIngressApiClient::InventoryObjectLazy.new(
         :inventory_collection_name => collection,
         :reference                 => reference,
         :ref                       => ref,
@@ -65,7 +65,7 @@ module Openshift
     def lazy_find_namespace(name)
       return if name.nil?
 
-      TopologicalInventory::IngressApi::Client::InventoryObjectLazy.new(
+      TopologicalInventoryIngressApiClient::InventoryObjectLazy.new(
         :inventory_collection_name => :container_projects,
         :reference                 => {:name => name},
         :ref                       => :by_name,
@@ -75,7 +75,7 @@ module Openshift
     def lazy_find_node(name)
       return if name.nil?
 
-      TopologicalInventory::IngressApi::Client::InventoryObjectLazy.new(
+      TopologicalInventoryIngressApiClient::InventoryObjectLazy.new(
         :inventory_collection_name => :container_nodes,
         :reference                 => {:name => name},
         :ref                       => :by_name,

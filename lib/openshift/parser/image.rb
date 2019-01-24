@@ -9,7 +9,7 @@ module Openshift
       def parse_image(image)
         image_name = parse_image_name(image)
 
-        container_image = TopologicalInventory::IngressApi::Client::ContainerImage.new(
+        container_image = TopologicalInventoryIngressApiClient::ContainerImage.new(
           parse_base_item(image).merge(
             :name => image_name
           )
@@ -31,7 +31,7 @@ module Openshift
 
       def parse_image_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_image_tags].data << TopologicalInventory::IngressApi::Client::ContainerImageTag.new(
+          collections[:container_image_tags].data << TopologicalInventoryIngressApiClient::ContainerImageTag.new(
             :container_image => lazy_find(:container_images, :source_ref => source_ref),
             :tag             => lazy_find(:tags, :name => key),
             :value           => value,

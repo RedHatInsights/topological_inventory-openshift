@@ -12,7 +12,7 @@ module Openshift
           memory = parse_quantity(node.status.capacity&.memory)
         end
 
-        container_node = TopologicalInventory::IngressApi::Client::ContainerNode.new(
+        container_node = TopologicalInventoryIngressApiClient::ContainerNode.new(
           parse_base_item(node).merge(
             :cpus   => cpus,
             :memory => memory,
@@ -35,7 +35,7 @@ module Openshift
 
       def parse_node_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_node_tags].data << TopologicalInventory::IngressApi::Client::ContainerNodeTag.new(
+          collections[:container_node_tags].data << TopologicalInventoryIngressApiClient::ContainerNodeTag.new(
             :container_node => lazy_find(:container_nodes, :source_ref => source_ref),
             :tag            => lazy_find(:tags, :name => key),
             :value          => value,

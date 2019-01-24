@@ -7,7 +7,7 @@ module Openshift
       end
 
       def parse_template(template)
-        container_template = TopologicalInventory::IngressApi::Client::ContainerTemplate.new(
+        container_template = TopologicalInventoryIngressApiClient::ContainerTemplate.new(
           parse_base_item(template).merge(
             :container_project => lazy_find_namespace(template.metadata&.namespace)
           )
@@ -28,7 +28,7 @@ module Openshift
 
       def parse_template_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_template_tags].data << TopologicalInventory::IngressApi::Client::ContainerTemplateTag.new(
+          collections[:container_template_tags].data << TopologicalInventoryIngressApiClient::ContainerTemplateTag.new(
             :container_template => lazy_find(:container_templates, :source_ref => source_ref),
             :tag                => lazy_find(:tags, :name => key),
             :value              => value,
