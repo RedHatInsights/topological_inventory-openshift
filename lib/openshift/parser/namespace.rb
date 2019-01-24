@@ -7,7 +7,7 @@ module Openshift
       end
 
       def parse_namespace(namespace)
-        container_project = TopologicalInventory::IngressApi::Client::ContainerProject.new(
+        container_project = TopologicalInventoryIngressApiClient::ContainerProject.new(
           parse_base_item(namespace)
         )
 
@@ -26,7 +26,7 @@ module Openshift
 
       def parse_namespace_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_project_tags].data << TopologicalInventory::IngressApi::Client::ContainerProjectTag.new(
+          collections[:container_project_tags].data << TopologicalInventoryIngressApiClient::ContainerProjectTag.new(
             :container_project => lazy_find(:container_projects, :source_ref => source_ref),
             :tag               => lazy_find(:tags, :name => key),
             :value             => value,

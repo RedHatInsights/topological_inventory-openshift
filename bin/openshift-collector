@@ -24,8 +24,8 @@ args = parse_args
 
 ingress_api_uri = URI(args[:ingress_api])
 
-TopologicalInventory::IngressApi::Client.configure.scheme = ingress_api_uri.scheme || "http"
-TopologicalInventory::IngressApi::Client.configure.host   = "#{ingress_api_uri.host}:#{ingress_api_uri.port}"
+TopologicalInventoryIngressApiClient.configure.scheme = ingress_api_uri.scheme || "http"
+TopologicalInventoryIngressApiClient.configure.host   = "#{ingress_api_uri.host}:#{ingress_api_uri.port}"
 
 collector = Openshift::Collector.new(args[:source], args[:hostname], args[:token])
 Thread.new { collector.collect! }

@@ -15,7 +15,7 @@ module Openshift
         icon_class   = (service_class.spec&.externalMetadata || {})["console.openshift.io/iconClass"]
         @icons_cache << icon_class
 
-        service_offering = TopologicalInventory::IngressApi::Client::ServiceOffering.new(
+        service_offering = TopologicalInventoryIngressApiClient::ServiceOffering.new(
           :source_ref            => service_class.spec.externalID,
           :name                  => service_class.spec&.externalName,
           :description           => service_class.spec&.description,
@@ -46,7 +46,7 @@ module Openshift
 
         collections[:service_offering_icons].data.concat(
           icons_cache.map do |icon|
-            TopologicalInventory::IngressApi::Client::ServiceOfferingIcon.new(
+            TopologicalInventoryIngressApiClient::ServiceOfferingIcon.new(
               :source_ref => icon,
               :data       => fetch_icon(icon)
             )
@@ -66,7 +66,7 @@ module Openshift
         http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         request          = Net::HTTP::Get.new(uri.path)
         body = http.request(request).body
-        return unless body.starts_with?("<svg") # We allow only svg icons
+        return unless body.start_with?("<svg") # We allow only svg icons
         body
       end
 
@@ -74,7 +74,7 @@ module Openshift
         (tags || []).each do |key|
           next if key.empty?
 
-          collections[:service_offering_tags].data << TopologicalInventory::IngressApi::Client::ServiceOfferingTag.new(
+          collections[:service_offering_tags].data << TopologicalInventoryIngressApiClient::ServiceOfferingTag.new(
             :service_offering => lazy_find(:service_offerings, :source_ref => source_ref),
             :tag              => lazy_find(:tags, :name => key),
             :value            => '',

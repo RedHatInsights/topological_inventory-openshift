@@ -13,7 +13,7 @@ module Openshift
         service_offering = lazy_find(:service_offerings, :source_ref => cluster_service_class_name) if cluster_service_class_name
         service_plan     = lazy_find(:service_plans, :source_ref => cluster_service_plan_name) if cluster_service_plan_name
 
-        service_instance = TopologicalInventory::IngressApi::Client::ServiceInstance.new(
+        service_instance = TopologicalInventoryIngressApiClient::ServiceInstance.new(
           :source_ref        => service_instance.spec.externalID,
           :name              => service_instance.spec.externalName,
           :source_created_at => service_instance.metadata.creationTimestamp,
