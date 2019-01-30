@@ -23,7 +23,7 @@ module Openshift
         container_template = parse_template(notice.object)
         archive_entity(container_template, notice.object) if notice.type == "DELETED"
       end
-      
+
       private
 
       def parse_template_tags(source_ref, tags)

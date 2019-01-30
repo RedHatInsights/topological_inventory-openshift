@@ -30,7 +30,7 @@ module Openshift
         container_node = parse_node(notice.object)
         archive_entity(container_node, notice.object) if notice.type == "DELETED"
       end
-      
+
       private
 
       def parse_node_tags(source_ref, tags)

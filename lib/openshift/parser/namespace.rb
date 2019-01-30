@@ -21,7 +21,7 @@ module Openshift
         container_project = parse_namespace(notice.object)
         archive_entity(container_project, notice.object) if notice.type == "DELETED"
       end
-      
+
       private
 
       def parse_namespace_tags(source_ref, tags)
