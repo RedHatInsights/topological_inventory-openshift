@@ -5,12 +5,13 @@ require "topological_inventory-ingress_api-client"
 
 module Openshift
   class Collector
-    def initialize(source, openshift_host, openshift_token, default_limit: 100, poll_time: 5)
+    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 100, poll_time: 5)
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.limits            = Hash.new(default_limit)
       self.log               = Logger.new(STDOUT)
       self.openshift_host    = openshift_host
+      self.openshift_port    = openshift_port
       self.openshift_token   = openshift_token
       self.poll_time         = poll_time
       self.queue             = Queue.new
@@ -39,7 +40,8 @@ module Openshift
     private
 
     attr_accessor :collector_threads, :finished, :limits, :log,
-                  :openshift_host, :openshift_token, :poll_time, :queue, :source
+                  :openshift_host, :openshift_token, :openshift_port,
+                  :poll_time, :queue, :source
 
     def finished?
       finished.value
@@ -192,15 +194,19 @@ module Openshift
     end
 
     def kubernetes_connection
-      Openshift::Connection.kubernetes(host: openshift_host, token: openshift_token)
+      Openshift::Connection.kubernetes(connection_params)
     end
 
     def openshift_connection
-      Openshift::Connection.openshift(host: openshift_host, token: openshift_token)
+      Openshift::Connection.openshift(connection_params)
     end
 
     def servicecatalog_connection
-      Openshift::Connection.servicecatalog(host: openshift_host, token: openshift_token)
+      Openshift::Connection.servicecatalog(connection_params)
+    end
+
+    def connection_params
+      {:host => openshift_host, :port => openshift_port, :token => openshift_token}
     end
 
     def ingress_api_client
