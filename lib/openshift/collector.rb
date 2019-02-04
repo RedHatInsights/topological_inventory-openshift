@@ -5,7 +5,8 @@ require "topological_inventory-ingress_api-client"
 
 module Openshift
   class Collector
-    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 100, poll_time: 5)
+    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 100, poll_time: 30)
+      self.connection_manager = Openshift::Connection.new
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.limits            = Hash.new(default_limit)
@@ -39,7 +40,7 @@ module Openshift
 
     private
 
-    attr_accessor :collector_threads, :finished, :limits, :log,
+    attr_accessor :connection_manager, :collector_threads, :finished, :limits, :log,
                   :openshift_host, :openshift_token, :openshift_port,
                   :poll_time, :queue, :source
 
@@ -59,6 +60,7 @@ module Openshift
     def start_collector_thread(entity_type)
       log.info("Starting collector thread for #{entity_type}...")
       connection = connection_for_entity_type(entity_type)
+      return if connection.nil?
 
       Thread.new do
         collector_thread(connection, entity_type)
@@ -187,22 +189,18 @@ module Openshift
     end
 
     def connection_for_entity_type(entity_type)
+      endpoint_type = endpoint_for_entity_type(entity_type)
+      return if endpoint_type.nil?
+
+      connection_manager.connect(endpoint_type, connection_params)
+    end
+
+    def endpoint_for_entity_type(entity_type)
       endpoint_types.each do |endpoint|
-        return send("#{endpoint}_connection") if send("#{endpoint}_entity_types").include?(entity_type)
+        return endpoint if send("#{endpoint}_entity_types").include?(entity_type)
       end
-      return nil
-    end
 
-    def kubernetes_connection
-      Openshift::Connection.kubernetes(connection_params)
-    end
-
-    def openshift_connection
-      Openshift::Connection.openshift(connection_params)
-    end
-
-    def servicecatalog_connection
-      Openshift::Connection.servicecatalog(connection_params)
+      nil
     end
 
     def connection_params
