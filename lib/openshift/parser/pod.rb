@@ -46,6 +46,7 @@ module Openshift
         pod.spec.containers.map do |container|
           TopologicalInventoryIngressApiClient::Container.new(
             :container_group    => lazy_find(:container_groups, {:source_ref => pod.metadata.uid}),
+            :container_image    => lazy_find(:container_images, {:source_ref => container.image}),
             :name               => container.name,
             :resource_timestamp => resource_timestamp,
             :cpu_limit          => parse_quantity(container.resources&.limits&.cpu),
