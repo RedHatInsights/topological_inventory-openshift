@@ -9,7 +9,7 @@ gem "topological_inventory-ingress_api-client", :git => "https://github.com/Mana
 gem "more_core_extensions"
 
 group :test do
-  gem "rspec-core"
+  gem "rspec"
 end
 
 #
