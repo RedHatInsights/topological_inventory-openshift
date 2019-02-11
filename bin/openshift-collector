@@ -29,6 +29,4 @@ TopologicalInventoryIngressApiClient.configure.scheme = ingress_api_uri.scheme |
 TopologicalInventoryIngressApiClient.configure.host   = "#{ingress_api_uri.host}:#{ingress_api_uri.port}"
 
 collector = Openshift::Collector.new(args[:source], args[:hostname], args[:port], args[:token])
-Thread.new { collector.collect! }
-
-loop { sleep }
+collector.collect!
