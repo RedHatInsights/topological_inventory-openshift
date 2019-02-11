@@ -9,6 +9,7 @@ require "openshift/parser/template"
 require "openshift/parser/cluster_service_class"
 require "openshift/parser/cluster_service_plan"
 require "openshift/parser/service_instance"
+require "topological_inventory-ingress_api-client"
 
 module Openshift
   class Parser
