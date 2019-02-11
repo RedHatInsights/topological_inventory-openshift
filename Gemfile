@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem "activesupport"
+gem "activesupport", "~> 5.2.2"
 gem "concurrent-ruby"
 gem "kubeclient", :git => "https://github.com/abonas/kubeclient", :branch => "master"
 gem "optimist"
