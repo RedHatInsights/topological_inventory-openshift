@@ -7,6 +7,10 @@ gem "optimist"
 gem "topological_inventory-ingress_api-client", :git => "https://github.com/ManageIQ/topological_inventory-ingress_api-client-ruby", :branch => "master"
 gem "more_core_extensions"
 
+group :test do
+  gem "rspec-core"
+end
+
 #
 # Custom Gemfile modifications
 #
