@@ -1,4 +1,4 @@
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
     module ServiceInstance
       def parse_service_instances(service_instances)

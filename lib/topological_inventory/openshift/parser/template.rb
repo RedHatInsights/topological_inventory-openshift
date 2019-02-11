@@ -1,4 +1,4 @@
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
     module Template
       def parse_templates(templates)

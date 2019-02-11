@@ -1,4 +1,4 @@
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
     module Image
       def parse_images(images)

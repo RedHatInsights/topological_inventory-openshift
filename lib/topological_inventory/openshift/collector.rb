@@ -1,12 +1,13 @@
 require "concurrent"
-require "openshift/connection"
-require "openshift/parser"
+require "topological_inventory/openshift"
+require "topological_inventory/openshift/connection"
+require "topological_inventory/openshift/parser"
 require "topological_inventory-ingress_api-client"
 
-module Openshift
+module TopologicalInventory::Openshift
   class Collector
     def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 100, poll_time: 30)
-      self.connection_manager = Openshift::Connection.new
+      self.connection_manager = Connection.new
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.limits            = Hash.new(default_limit)
@@ -99,7 +100,7 @@ module Openshift
         continue         = entities.continue
         resource_version = entities.resourceVersion
 
-        parser = Openshift::Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
+        parser = Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
         parser.send("parse_#{entity_type}", entities)
 
         refresh_state_part_uuid = SecureRandom.uuid
@@ -113,7 +114,7 @@ module Openshift
 
       log.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
-      parser = Openshift::Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
+      parser = Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
       collection = parser.send("parse_#{entity_type}", [])
 
       sweep_inventory(refresh_state_uuid, total_parts, [collection.name])
@@ -126,7 +127,7 @@ module Openshift
     end
 
     def targeted_refresh(notices)
-      parser = Openshift::Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
+      parser = Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
 
       notices.each do |notice|
         entity_type = notice.object&.kind&.underscore
