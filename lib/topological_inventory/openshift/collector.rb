@@ -6,7 +6,7 @@ require "topological_inventory-ingress_api-client"
 
 module TopologicalInventory::Openshift
   class Collector
-    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 100, poll_time: 30)
+    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 50, poll_time: 30)
       self.connection_manager = Connection.new
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)

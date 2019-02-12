@@ -11,7 +11,8 @@ module TopologicalInventory::Openshift
 
         container_image = TopologicalInventoryIngressApiClient::ContainerImage.new(
           parse_base_item(image).merge(
-            :name => image_name
+            :name       => image_name,
+            :source_ref => image.dockerImageReference,
           )
         )
 
