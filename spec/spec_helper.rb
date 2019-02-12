@@ -1,4 +1,7 @@
-require "bundler/setup"
+if ENV['CI']
+  require 'simplecov'
+  SimpleCov.start
+end
 
 # For defining kubernetes entities in specs
 require "kubeclient"
