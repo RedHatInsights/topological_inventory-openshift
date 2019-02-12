@@ -2,7 +2,7 @@ require "kubeclient"
 require "openssl"
 require "active_support/core_ext/numeric/time"
 
-module Openshift
+module TopologicalInventory::Openshift
   class Connection
     def initialize
       @connection_failure_time = {}

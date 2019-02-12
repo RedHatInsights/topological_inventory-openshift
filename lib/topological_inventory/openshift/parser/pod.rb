@@ -1,6 +1,6 @@
 require "active_support/core_ext/enumerable"
 
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
     module Pod
       def parse_pods(pods)

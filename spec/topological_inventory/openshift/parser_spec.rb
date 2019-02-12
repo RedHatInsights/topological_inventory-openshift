@@ -1,6 +1,4 @@
-require "openshift/parser"
-
-RSpec.describe Openshift::Parser do
+RSpec.describe TopologicalInventory::Openshift::Parser do
   let(:parser) { described_class.new(openshift_host: "localhost") }
 
   context "#parse_base_item" do

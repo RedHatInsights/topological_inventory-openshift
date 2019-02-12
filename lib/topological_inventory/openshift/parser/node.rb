@@ -1,4 +1,4 @@
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
     module Node
       def parse_nodes(nodes)

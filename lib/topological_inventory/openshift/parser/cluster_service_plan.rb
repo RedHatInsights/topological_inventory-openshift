@@ -1,4 +1,4 @@
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
     module ClusterServicePlan
       def parse_cluster_service_plans(cluster_service_plans)

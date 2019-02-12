@@ -1,26 +1,27 @@
 require "active_support/inflector"
 require "more_core_extensions/core_ext/string/iec60027_2"
 require "more_core_extensions/core_ext/string/decimal_suffix"
-require "openshift/parser/image"
-require "openshift/parser/pod"
-require "openshift/parser/namespace"
-require "openshift/parser/node"
-require "openshift/parser/template"
-require "openshift/parser/cluster_service_class"
-require "openshift/parser/cluster_service_plan"
-require "openshift/parser/service_instance"
+require "topological_inventory/openshift"
+require "topological_inventory/openshift/parser/image"
+require "topological_inventory/openshift/parser/pod"
+require "topological_inventory/openshift/parser/namespace"
+require "topological_inventory/openshift/parser/node"
+require "topological_inventory/openshift/parser/template"
+require "topological_inventory/openshift/parser/cluster_service_class"
+require "topological_inventory/openshift/parser/cluster_service_plan"
+require "topological_inventory/openshift/parser/service_instance"
 require "topological_inventory-ingress_api-client"
 
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
-    include Openshift::Parser::Image
-    include Openshift::Parser::Pod
-    include Openshift::Parser::Namespace
-    include Openshift::Parser::Node
-    include Openshift::Parser::Template
-    include Openshift::Parser::ClusterServiceClass
-    include Openshift::Parser::ClusterServicePlan
-    include Openshift::Parser::ServiceInstance
+    include Image
+    include Pod
+    include Namespace
+    include Node
+    include Template
+    include ClusterServiceClass
+    include ClusterServicePlan
+    include ServiceInstance
 
     attr_accessor :collections, :resource_timestamp, :openshift_host, :openshift_port
 

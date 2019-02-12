@@ -1,4 +1,4 @@
-module Openshift
+module TopologicalInventory::Openshift
   class Parser
     module Namespace
       def parse_namespaces(namespaces)
