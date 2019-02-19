@@ -14,6 +14,7 @@ gem "topological_inventory-ingress_api-client", :git => "https://github.com/Mana
 group :development, :test do
   gem "rspec"
   gem "simplecov"
+  gem "webmock"
 end
 
 #
