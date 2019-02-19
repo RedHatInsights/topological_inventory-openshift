@@ -12,7 +12,7 @@ module TopologicalInventory::Openshift
           memory = parse_quantity(node.status.capacity&.memory)
         end
 
-        container_node = TopologicalInventoryIngressApiClient::ContainerNode.new(
+        container_node = collections.container_nodes.build(
           parse_base_item(node).merge(
             :cpus   => cpus,
             :memory => memory,
@@ -20,7 +20,6 @@ module TopologicalInventory::Openshift
           )
         )
 
-        collections[:container_nodes].data << container_node
         parse_node_tags(container_node.source_ref, node.metadata&.labels&.to_h)
 
         container_node
@@ -35,7 +34,7 @@ module TopologicalInventory::Openshift
 
       def parse_node_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_node_tags].data << TopologicalInventoryIngressApiClient::ContainerNodeTag.new(
+          collections.container_node_tags.build(
             :container_node => lazy_find(:container_nodes, :source_ref => source_ref),
             :tag            => lazy_find(:tags, :name => key),
             :value          => value,

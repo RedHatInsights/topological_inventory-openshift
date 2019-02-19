@@ -7,11 +7,10 @@ module TopologicalInventory::Openshift
       end
 
       def parse_namespace(namespace)
-        container_project = TopologicalInventoryIngressApiClient::ContainerProject.new(
+        container_project = collections.container_projects.build(
           parse_base_item(namespace)
         )
 
-        collections[:container_projects].data << container_project
         parse_namespace_tags(container_project.source_ref, namespace.metadata&.labels&.to_h)
 
         container_project
@@ -26,7 +25,7 @@ module TopologicalInventory::Openshift
 
       def parse_namespace_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_project_tags].data << TopologicalInventoryIngressApiClient::ContainerProjectTag.new(
+          collections.container_project_tags.build(
             :container_project => lazy_find(:container_projects, :source_ref => source_ref),
             :tag               => lazy_find(:tags, :name => key),
             :value             => value,
