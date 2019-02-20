@@ -7,6 +7,7 @@ gem "optimist"
 gem "rake"
 
 gem "kubeclient", :git => "https://github.com/abonas/kubeclient", :branch => "master"
+gem "manageiq-loggers", "~> 0.1.0"
 gem "manageiq-messaging", "~> 0.1.2"
 gem 'topological_inventory-api-client',         :git => "https://github.com/eclarizio/topological_inventory-api-client", :branch => "master"
 gem "topological_inventory-ingress_api-client", :git => "https://github.com/ManageIQ/topological_inventory-ingress_api-client-ruby", :branch => "master"

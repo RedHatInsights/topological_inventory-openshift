@@ -1,17 +1,19 @@
 require "concurrent"
 require "topological_inventory/openshift"
+require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
 require "topological_inventory-ingress_api-client"
 
 module TopologicalInventory::Openshift
   class Collector
+    include Logging
+
     def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 50, poll_time: 30)
       self.connection_manager = Connection.new
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.limits            = Hash.new(default_limit)
-      self.log               = Logger.new(STDOUT)
       self.openshift_host    = openshift_host
       self.openshift_port    = openshift_port
       self.openshift_token   = openshift_token
@@ -41,7 +43,7 @@ module TopologicalInventory::Openshift
 
     private
 
-    attr_accessor :connection_manager, :collector_threads, :finished, :limits, :log,
+    attr_accessor :connection_manager, :collector_threads, :finished, :limits,
                   :openshift_host, :openshift_token, :openshift_port,
                   :poll_time, :queue, :source
 
@@ -59,7 +61,7 @@ module TopologicalInventory::Openshift
     alias start_collector_threads ensure_collector_threads
 
     def start_collector_thread(entity_type)
-      log.info("Starting collector thread for #{entity_type}...")
+      logger.info("Starting collector thread for #{entity_type}...")
       connection = connection_for_entity_type(entity_type)
       return if connection.nil?
 
@@ -67,7 +69,7 @@ module TopologicalInventory::Openshift
         collector_thread(connection, entity_type)
       end
     rescue => err
-      log.error(err)
+      logger.error(err)
       nil
     end
 
@@ -75,11 +77,11 @@ module TopologicalInventory::Openshift
       resource_version = full_refresh(connection, entity_type)
 
       watch(connection, entity_type, resource_version) do |notice|
-        log.info("#{entity_type} #{notice.object.metadata.name} was #{notice.type.downcase}")
+        logger.info("#{entity_type} #{notice.object.metadata.name} was #{notice.type.downcase}")
         queue.push(notice)
       end
     rescue => err
-      log.error(err)
+      logger.error(err)
     end
 
     def watch(connection, entity_type, resource_version)
@@ -90,7 +92,7 @@ module TopologicalInventory::Openshift
       resource_version = continue = nil
 
       refresh_state_uuid = SecureRandom.uuid
-      log.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
+      logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
       total_parts = 0
       loop do
@@ -110,19 +112,19 @@ module TopologicalInventory::Openshift
         break if entities.last?
       end
 
-      log.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete - Parts [#{total_parts}]")
+      logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete - Parts [#{total_parts}]")
 
-      log.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
+      logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
       parser = Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
       collection = parser.send("parse_#{entity_type}", [])
 
       sweep_inventory(refresh_state_uuid, total_parts, [collection.name])
 
-      log.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
+      logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
     rescue => e
-      log.error("Error collecting :#{entity_type}, message => #{e.message}")
+      logger.error("Error collecting :#{entity_type}, message => #{e.message}")
       raise e
     end
 
