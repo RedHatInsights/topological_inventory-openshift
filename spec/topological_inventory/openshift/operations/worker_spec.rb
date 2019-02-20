@@ -30,6 +30,9 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:headers) { {"Content-Type" => "application/json"} }
 
     before do
+      require "active_support/json"
+      require "active_support/core_ext/object/json" # required to get service_plan.to_json to work properly
+
       allow(ManageIQ::Messaging::Client).to receive(:open).and_return(client)
       allow(client).to receive(:close)
       allow(client).to receive(:subscribe_messages).and_yield(messages)
