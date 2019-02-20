@@ -5,7 +5,8 @@ end
 
 # For defining kubernetes entities in specs
 require "kubeclient"
-
+require "rspec"
+require "webmock/rspec"
 require "topological_inventory/openshift/collector"
 
 RSpec.configure do |config|
