@@ -22,6 +22,11 @@ module TopologicalInventory
           around do |e|
             url = ENV["TOPOLOGICAL_INVENTORY_URL"]
             ENV["TOPOLOGICAL_INVENTORY_URL"] = "http://localhost:3000"
+            uri = URI.parse(ENV["TOPOLOGICAL_INVENTORY_URL"])
+            TopologicalInventoryApiClient.configure do |config|
+              config.scheme = uri.scheme || "http"
+              config.host = "#{uri.host}:#{uri.port}"
+            end
 
             e.run
 

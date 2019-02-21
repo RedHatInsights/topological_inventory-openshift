@@ -7,12 +7,6 @@ module TopologicalInventory
         class Retriever
           def initialize(id)
             @id = id
-            uri = URI.parse(ENV["TOPOLOGICAL_INVENTORY_URL"])
-            TopologicalInventoryApiClient.configure do |config|
-              config.scheme = uri.scheme
-              config.host = "#{uri.host}:#{uri.port}"
-            end
-
             @api_instance = TopologicalInventoryApiClient::DefaultApi.new
           end
 
