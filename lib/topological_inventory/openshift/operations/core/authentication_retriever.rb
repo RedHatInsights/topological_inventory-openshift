@@ -9,10 +9,20 @@ module TopologicalInventory
             headers = {
               "Content-Type" => "application/json"
             }
-            url = URI.join(ENV["TOPOLOGICAL_INVENTORY_URL"], "/internal/v0.0/authentications/#{@id}?expose_encrypted_attribute[]=password")
+
+            scheme     = TopologicalInventoryApiClient.configure.scheme
+            host, port = TopologicalInventoryApiClient.configure.host.split(":")
+
+            uri = URI::Generic.build(
+              :scheme => scheme,
+              :host   => host,
+              :port   => port,
+              :path   => "/internal/v0.0/authentications/#{@id}",
+              :query  => "expose_encrypted_attribute[]=password")
+
             request_options = {
               :method  => :get,
-              :url     => url.to_s,
+              :url     => uri.to_s,
               :headers => headers
             }
             response = RestClient::Request.new(request_options).execute
