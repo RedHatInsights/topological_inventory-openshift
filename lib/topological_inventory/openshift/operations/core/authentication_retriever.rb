@@ -1,16 +1,22 @@
+require "topological_inventory/openshift/operations/core/retriever"
+
 module TopologicalInventory
   module Openshift
     module Operations
       module Core
-        class AuthenticationRetriever
-          def initialize(endpoint_id)
-            @endpoint_id = endpoint_id
-          end
-
+        class AuthenticationRetriever < Retriever
           def process
-            # Without using Rails example:
-            # https://github.com/ManageIQ/topological_inventory-orchestrator/pull/1/files#diff-4743ee12ee7e621468f2e6590de994efR97
-            # Authentication.where(:resource_type => "Endpoint", :resource_id => @endpoint_id).first
+            headers = {
+              "Content-Type" => "application/json"
+            }
+            url = URI.join(ENV["TOPOLOGICAL_INVENTORY_URL"], "/internal/v0.0/authentications/#{@id}?expose_encrypted_attribute[]=password")
+            request_options = {
+              :method  => :get,
+              :url     => url.to_s,
+              :headers => headers
+            }
+            response = RestClient::Request.new(request_options).execute
+            TopologicalInventoryApiClient::Authentication.new(JSON.parse(response.body))
           end
         end
       end

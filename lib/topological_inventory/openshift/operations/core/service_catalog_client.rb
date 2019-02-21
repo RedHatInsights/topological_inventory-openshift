@@ -2,6 +2,7 @@ require "rest_client"
 require "topological_inventory/openshift/operations/core/authentication_retriever"
 require "topological_inventory/openshift/operations/core/service_plan_client"
 require "topological_inventory/openshift/operations/core/source_endpoints_retriever"
+require "topological_inventory-api-client"
 
 module TopologicalInventory
   module Openshift
@@ -12,7 +13,10 @@ module TopologicalInventory
             all_source_endpoints = SourceEndpointsRetriever.new(source_id).process
             @default_endpoint = all_source_endpoints.data.find { |endpoint| endpoint.default }
 
-            @authentication = AuthenticationRetriever.new(@default_endpoint.id).process
+            api_instance = TopologicalInventoryApiClient::DefaultApi.new
+            authentication_id = api_instance.list_endpoint_authentications(@default_endpoint.id.to_s).data.first&.id
+
+            @authentication = AuthenticationRetriever.new(authentication_id).process
           end
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)

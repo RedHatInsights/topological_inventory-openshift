@@ -12,7 +12,7 @@ module TopologicalInventory
           let(:source_endpoints_retriever) { instance_double("SourceEndpointsRetriever") }
           let(:authentication_retriever) { instance_double("AuthenticationRetriever") }
 
-          let(:endpoints_url) { "http://localhost:3000/api/topological-inventory/v0.0/sources/123/endpoints" }
+          let(:endpoints_url) { "http://localhost:3000/r/insights/platform/topological-inventory/v0.1/sources/123/endpoints" }
           let(:endpoints_headers) { {"Content-Type" => "application/json"} }
           let(:endpoints_api_response) do
             {
@@ -25,26 +25,34 @@ module TopologicalInventory
               }]
             }
           end
+          let(:endpoint_authentications_url) do
+            "http://localhost:3000/r/insights/platform/topological-inventory/v0.1/endpoints/321/authentications"
+          end
+          let(:endpoints_authentications_response) { {"data" => [{"id" => 3210}] } }
 
           before do
             stub_request(:get, endpoints_url).with(:headers => endpoints_headers).to_return(
               :headers => endpoints_headers, :body => endpoints_api_response.to_json
             )
-            allow(AuthenticationRetriever).to receive(:new).and_return(authentication_retriever)
+            stub_request(:get, endpoint_authentications_url).with(:headers => endpoints_headers).to_return(
+              :headers => endpoints_headers, :body => endpoints_authentications_response.to_json
+            )
+            allow(AuthenticationRetriever).to receive(:new).with("3210").and_return(authentication_retriever)
             allow(authentication_retriever).to receive(:process).and_return(auth)
           end
 
           around do |e|
             url    = ENV["TOPOLOGICAL_INVENTORY_URL"]
-            prefix = ENV["PATH_PREFIX"]
-
             ENV["TOPOLOGICAL_INVENTORY_URL"] = "http://localhost:3000"
-            ENV["PATH_PREFIX"]               = "api"
+            uri = URI.parse(ENV["TOPOLOGICAL_INVENTORY_URL"])
+            TopologicalInventoryApiClient.configure do |config|
+              config.scheme = uri.scheme || "http"
+              config.host = "#{uri.host}:#{uri.port}"
+            end
 
             e.run
 
             ENV["TOPOLOGICAL_INVENTORY_URL"] = url
-            ENV["PATH_PREFIX"]               = prefix
           end
 
           describe "#order_service_plan" do
