@@ -20,16 +20,12 @@ module TopologicalInventory
           end
 
           around do |e|
-            url    = ENV["TOPOLOGICAL_INVENTORY_URL"]
-            prefix = ENV["PATH_PREFIX"]
-
+            url = ENV["TOPOLOGICAL_INVENTORY_URL"]
             ENV["TOPOLOGICAL_INVENTORY_URL"] = "http://localhost:3000"
-            ENV["PATH_PREFIX"]               = "api"
 
             e.run
 
             ENV["TOPOLOGICAL_INVENTORY_URL"] = url
-            ENV["PATH_PREFIX"]               = prefix
           end
 
           describe "#process" do

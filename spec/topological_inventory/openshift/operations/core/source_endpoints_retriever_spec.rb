@@ -8,7 +8,7 @@ module TopologicalInventory
           let(:subject) { described_class.new(123) }
 
           describe "#process" do
-            let(:url) { "http://localhost:3000/api/topological-inventory/v0.0/sources/123/endpoints" }
+            let(:url) { "http://localhost:3000/r/insights/platform/topological-inventory/v0.1/sources/123/endpoints" }
             let(:headers) { {"Content-Type" => "application/json"} }
             let(:dummy_response) { {"data" => [{"host" => "dummy"}]} }
 
@@ -17,16 +17,12 @@ module TopologicalInventory
             end
 
             around do |e|
-              url    = ENV["TOPOLOGICAL_INVENTORY_URL"]
-              prefix = ENV["PATH_PREFIX"]
-
+              url = ENV["TOPOLOGICAL_INVENTORY_URL"]
               ENV["TOPOLOGICAL_INVENTORY_URL"] = "http://localhost:3000"
-              ENV["PATH_PREFIX"]               = "api"
 
               e.run
 
               ENV["TOPOLOGICAL_INVENTORY_URL"] = url
-              ENV["PATH_PREFIX"]               = prefix
             end
 
             it "returns the list of endpoints based on the source" do

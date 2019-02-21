@@ -12,7 +12,7 @@ module TopologicalInventory
           let(:source_endpoints_retriever) { instance_double("SourceEndpointsRetriever") }
           let(:authentication_retriever) { instance_double("AuthenticationRetriever") }
 
-          let(:endpoints_url) { "http://localhost:3000/api/topological-inventory/v0.0/sources/123/endpoints" }
+          let(:endpoints_url) { "http://localhost:3000/r/insights/platform/topological-inventory/v0.1/sources/123/endpoints" }
           let(:endpoints_headers) { {"Content-Type" => "application/json"} }
           let(:endpoints_api_response) do
             {
@@ -26,7 +26,7 @@ module TopologicalInventory
             }
           end
           let(:endpoint_authentications_url) do
-            "http://localhost:3000/api/topological-inventory/v0.0/endpoints/321/authentications"
+            "http://localhost:3000/r/insights/platform/topological-inventory/v0.1/endpoints/321/authentications"
           end
           let(:endpoints_authentications_response) { {"data" => [{"id" => 3210}] } }
 
@@ -43,15 +43,11 @@ module TopologicalInventory
 
           around do |e|
             url    = ENV["TOPOLOGICAL_INVENTORY_URL"]
-            prefix = ENV["PATH_PREFIX"]
-
             ENV["TOPOLOGICAL_INVENTORY_URL"] = "http://localhost:3000"
-            ENV["PATH_PREFIX"]               = "api"
 
             e.run
 
             ENV["TOPOLOGICAL_INVENTORY_URL"] = url
-            ENV["PATH_PREFIX"]               = prefix
           end
 
           describe "#order_service_plan" do

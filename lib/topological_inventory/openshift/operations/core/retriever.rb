@@ -9,7 +9,6 @@ module TopologicalInventory
             @id = id
             uri = URI.parse(ENV["TOPOLOGICAL_INVENTORY_URL"])
             TopologicalInventoryApiClient.configure do |config|
-              config.base_path = "#{ENV["PATH_PREFIX"]}/topological-inventory/v0.0/"
               config.scheme = uri.scheme
               config.host = "#{uri.host}:#{uri.port}"
             end
