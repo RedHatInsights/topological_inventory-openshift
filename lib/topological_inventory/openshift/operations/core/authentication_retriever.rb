@@ -6,13 +6,13 @@ module TopologicalInventory
       module Core
         class AuthenticationRetriever < Retriever
           def process
-            authentication_id = @api_instance.list_endpoint_authentications(@id.to_s).data[0].id
             headers = {
               "Content-Type" => "application/json"
             }
+            url = URI.join(ENV["TOPOLOGICAL_INVENTORY_URL"], "/internal/v0.0/authentications/#{@id}?expose_encrypted_attribute[]=password")
             request_options = {
               :method  => :get,
-              :url     => "#{ENV["TOPOLOGICAL_INVENTORY_URL"]}/internal/v0.0/authentications/#{authentication_id}?expose_encrypted_attribute[]=password",
+              :url     => url.to_s,
               :headers => headers
             }
             response = RestClient::Request.new(request_options).execute

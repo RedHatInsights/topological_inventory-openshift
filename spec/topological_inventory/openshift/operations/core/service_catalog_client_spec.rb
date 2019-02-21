@@ -25,12 +25,19 @@ module TopologicalInventory
               }]
             }
           end
+          let(:endpoint_authentications_url) do
+            "http://localhost:3000/api/topological-inventory/v0.0/endpoints/321/authentications"
+          end
+          let(:endpoints_authentications_response) { {"data" => [{"id" => 3210}] } }
 
           before do
             stub_request(:get, endpoints_url).with(:headers => endpoints_headers).to_return(
               :headers => endpoints_headers, :body => endpoints_api_response.to_json
             )
-            allow(AuthenticationRetriever).to receive(:new).and_return(authentication_retriever)
+            stub_request(:get, endpoint_authentications_url).with(:headers => endpoints_headers).to_return(
+              :headers => endpoints_headers, :body => endpoints_authentications_response.to_json
+            )
+            allow(AuthenticationRetriever).to receive(:new).with("3210").and_return(authentication_retriever)
             allow(authentication_retriever).to receive(:process).and_return(auth)
           end
 
