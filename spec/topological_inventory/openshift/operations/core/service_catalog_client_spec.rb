@@ -12,7 +12,7 @@ module TopologicalInventory
           let(:source_endpoints_retriever) { instance_double("SourceEndpointsRetriever") }
           let(:authentication_retriever) { instance_double("AuthenticationRetriever") }
 
-          let(:endpoints_url) { "http://localhost:3000/r/insights/platform/topological-inventory/v0.1/sources/123/endpoints" }
+          let(:endpoints_url) { "https://virtserver.swaggerhub.com/r/insights/platform/topological-inventory/v0.1/sources/123/endpoints" }
           let(:endpoints_headers) { {"Content-Type" => "application/json"} }
           let(:endpoints_api_response) do
             {
@@ -26,7 +26,7 @@ module TopologicalInventory
             }
           end
           let(:endpoint_authentications_url) do
-            "http://localhost:3000/r/insights/platform/topological-inventory/v0.1/endpoints/321/authentications"
+            "https://virtserver.swaggerhub.com/r/insights/platform/topological-inventory/v0.1/endpoints/321/authentications"
           end
           let(:endpoints_authentications_response) { {"data" => [{"id" => 3210}] } }
 
@@ -39,20 +39,6 @@ module TopologicalInventory
             )
             allow(AuthenticationRetriever).to receive(:new).with("3210").and_return(authentication_retriever)
             allow(authentication_retriever).to receive(:process).and_return(auth)
-          end
-
-          around do |e|
-            url    = ENV["TOPOLOGICAL_INVENTORY_URL"]
-            ENV["TOPOLOGICAL_INVENTORY_URL"] = "http://localhost:3000"
-            uri = URI.parse(ENV["TOPOLOGICAL_INVENTORY_URL"])
-            TopologicalInventoryApiClient.configure do |config|
-              config.scheme = uri.scheme || "http"
-              config.host = "#{uri.host}:#{uri.port}"
-            end
-
-            e.run
-
-            ENV["TOPOLOGICAL_INVENTORY_URL"] = url
           end
 
           describe "#order_service_plan" do

@@ -18,7 +18,8 @@ module TopologicalInventory
               :host   => host,
               :port   => port,
               :path   => "/internal/v0.0/authentications/#{@id}",
-              :query  => "expose_encrypted_attribute[]=password")
+              :query  => "expose_encrypted_attribute[]=password"
+            )
 
             request_options = {
               :method  => :get,
