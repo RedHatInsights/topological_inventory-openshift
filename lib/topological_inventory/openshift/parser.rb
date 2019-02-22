@@ -11,7 +11,6 @@ require "topological_inventory/openshift/parser/cluster_service_class"
 require "topological_inventory/openshift/parser/cluster_service_plan"
 require "topological_inventory/openshift/parser/service_instance"
 require "topological_inventory-ingress_api-client"
-require "topological_inventory/provider_common/collectors/inventory_collection_storage"
 
 module TopologicalInventory::Openshift
   class Parser
@@ -26,9 +25,9 @@ module TopologicalInventory::Openshift
 
     attr_accessor :collections, :resource_timestamp, :openshift_host, :openshift_port
 
-    def initialize(openshift_host:, openshift_port: 8443 )
+    def initialize(openshift_host:, openshift_port: 8443)
       self.resource_timestamp = Time.now.utc
-      self.collections = TopologicalInventory::ProviderCommon::Collectors::InventoryCollectionStorage.new
+      self.collections = TopologicalInventory::ProviderCommon::Collector::InventoryCollectionStorage.new
       self.openshift_host = openshift_host
       self.openshift_port = openshift_port
     end

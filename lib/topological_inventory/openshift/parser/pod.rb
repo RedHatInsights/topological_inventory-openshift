@@ -33,7 +33,7 @@ module TopologicalInventory::Openshift
 
       def parse_pod_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_group_tags].build(
+          collections.container_group_tags.build(
             :container_group => lazy_find(:container_groups, :source_ref => source_ref),
             :tag             => lazy_find(:tags, :name => key),
             :value           => value,

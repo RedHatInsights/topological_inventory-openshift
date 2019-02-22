@@ -27,7 +27,7 @@ module TopologicalInventory::Openshift
 
       def parse_template_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_template_tags].build(
+          collections.container_template_tags.build(
             :container_template => lazy_find(:container_templates, :source_ref => source_ref),
             :tag                => lazy_find(:tags, :name => key),
             :value              => value,
