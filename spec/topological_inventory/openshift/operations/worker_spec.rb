@@ -19,7 +19,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:service_offering) do
       TopologicalInventoryApiClient::ServiceOffering.new(:id => "456", :name => "service_offering")
     end
-    let(:payload) { {:service_plan_id => service_plan.id, :order_params => "order_params", :task_id => task.id} }
+    let(:payload) { {"service_plan_id" => service_plan.id, "order_params" => "order_params", "task_id" => task.id} }
 
     let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
     let(:base_url_path) { "https://virtserver.swaggerhub.com/r/insights/platform/topological-inventory/v0.1/" }

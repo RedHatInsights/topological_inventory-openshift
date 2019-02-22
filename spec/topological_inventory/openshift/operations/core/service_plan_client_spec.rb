@@ -8,8 +8,8 @@ module TopologicalInventory
           describe "#build_payload" do
             let(:order_parameters) do
               {
-                :service_parameters => service_parameters,
-                :provider_control_parameters => {:namespace => "namespace"}
+                "service_parameters"          => service_parameters,
+                "provider_control_parameters" => {"namespace" => "namespace"}
               }
             end
             let(:service_parameters) { {"DB_NAME" => "TEST_DB", "namespace" => "TEST_DB_NAMESPACE"} }
