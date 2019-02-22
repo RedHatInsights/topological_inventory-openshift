@@ -39,9 +39,10 @@ module TopologicalInventory
         attr_accessor :messaging_client_opts, :client
 
         def process_message(_client, msg)
+          logger.info("Processing order service with msg: #{msg.payload}")
           #TODO: Move to separate module later when more message types are expected aside from just ordering
-          context = order_service(msg.payload[:service_plan_id], msg.payload[:order_params])
-          update_task(msg.payload[:task_id].to_s, context)
+          context = order_service(msg.payload["service_plan_id"], msg.payload["order_params"])
+          update_task(msg.payload["task_id"].to_s, context)
         rescue => e
           logger.error(e.message)
           logger.error(e.backtrace.join("\n"))
