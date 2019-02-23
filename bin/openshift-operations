@@ -7,10 +7,9 @@ require "topological_inventory/openshift/operations/worker"
 queue_host = ENV["QUEUE_HOST"] || "localhost"
 queue_port = ENV["QUEUE_PORT"] || 9092
 
-uri = URI.parse(ENV["TOPOLOGICAL_INVENTORY_URL"])
 TopologicalInventoryApiClient.configure do |config|
-  config.scheme = uri.scheme || "http"
-  config.host = "#{uri.host}:#{uri.port}"
+  config.scheme = "http"
+  config.host = "#{ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_HOST"]}:#{ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_PORT"]}"
 end
 
 operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(:host => queue_host, :port => queue_port)
