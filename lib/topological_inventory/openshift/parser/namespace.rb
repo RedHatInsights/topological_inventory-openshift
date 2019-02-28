@@ -27,8 +27,7 @@ module TopologicalInventory::Openshift
         (tags || {}).each do |key, value|
           collections.container_project_tags.build(
             :container_project => lazy_find(:container_projects, :source_ref => source_ref),
-            :tag               => lazy_find(:tags, :name => key),
-            :value             => value,
+            :tag               => lazy_find(:tags, :name => key, :value => value),
           )
         end
       end
