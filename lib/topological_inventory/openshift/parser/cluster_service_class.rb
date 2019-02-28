@@ -73,8 +73,7 @@ module TopologicalInventory::Openshift
 
           collections.service_offering_tags.build(
             :service_offering => lazy_find(:service_offerings, :source_ref => source_ref),
-            :tag              => lazy_find(:tags, :name => key),
-            :value            => '',
+            :tag              => lazy_find(:tags, :name => key, :value => '')
           )
         end
       end
