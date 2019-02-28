@@ -27,7 +27,7 @@ module TopologicalInventory::Openshift
 
     def initialize(openshift_host:, openshift_port: 8443)
       self.resource_timestamp = Time.now.utc
-      self.collections = TopologicalInventory::ProviderCommon::Collector::InventoryCollectionStorage.new
+      self.collections = TopologicalInventoryIngressApiClient::Collector::InventoryCollectionStorage.new
       self.openshift_host = openshift_host
       self.openshift_port = openshift_port
     end

@@ -1,5 +1,5 @@
 require "concurrent"
-require "topological_inventory/provider_common/collector"
+require "topological_inventory-ingress_api-client/collector"
 require "topological_inventory/openshift"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
