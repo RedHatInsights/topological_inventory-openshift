@@ -10,17 +10,15 @@ module TopologicalInventory::Openshift
         cluster_service_class_name = service_plan.spec&.clusterServiceClassRef&.name
         service_offering = lazy_find(:service_offerings, :source_ref => service_plan&.spec&.clusterServiceClassRef&.name) if cluster_service_class_name
 
-        service_plan_data = TopologicalInventoryIngressApiClient::ServicePlan.new(
-          :source_ref        => service_plan.spec.externalID,
-          :name              => service_plan.spec.externalName,
-          :description       => service_plan.spec.description,
-          :resource_version  => service_plan.metadata&.resourceVersion,
-          :source_created_at => service_plan.metadata.creationTimestamp,
+        service_plan_data = collections.service_plans.build(
+          :source_ref         => service_plan.spec.externalID,
+          :name               => service_plan.spec.externalName,
+          :description        => service_plan.spec.description,
+          :resource_version   => service_plan.metadata&.resourceVersion,
+          :source_created_at  => service_plan.metadata.creationTimestamp,
           :create_json_schema => service_plan.spec&.instanceCreateParameterSchema,
-          :service_offering  => service_offering,
+          :service_offering   => service_offering,
         )
-
-        collections[:service_plans].data << service_plan_data
 
         service_plan_data
       end

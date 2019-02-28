@@ -1,9 +1,9 @@
 require "concurrent"
+require "topological_inventory-ingress_api-client/collector"
 require "topological_inventory/openshift"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
-require "topological_inventory-ingress_api-client"
 
 module TopologicalInventory::Openshift
   class Collector

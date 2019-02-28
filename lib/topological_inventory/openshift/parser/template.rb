@@ -7,13 +7,12 @@ module TopologicalInventory::Openshift
       end
 
       def parse_template(template)
-        container_template = TopologicalInventoryIngressApiClient::ContainerTemplate.new(
+        container_template = collections.container_templates.build(
           parse_base_item(template).merge(
             :container_project => lazy_find_namespace(template.metadata&.namespace)
           )
         )
 
-        collections[:container_templates].data << container_template
         parse_template_tags(container_template.source_ref, template.metadata&.labels&.to_h)
 
         container_template
@@ -28,7 +27,7 @@ module TopologicalInventory::Openshift
 
       def parse_template_tags(source_ref, tags)
         (tags || {}).each do |key, value|
-          collections[:container_template_tags].data << TopologicalInventoryIngressApiClient::ContainerTemplateTag.new(
+          collections.container_template_tags.build(
             :container_template => lazy_find(:container_templates, :source_ref => source_ref),
             :tag                => lazy_find(:tags, :name => key),
             :value              => value,
