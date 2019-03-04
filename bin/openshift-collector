@@ -10,10 +10,18 @@ def parse_args
   require 'optimist'
   opts = Optimist.options do
     opt :source, "Inventory Source UID", :type => :string, :required => ENV["SOURCE_UID"].nil?, :default => ENV["SOURCE_UID"]
-    opt :hostname, "Hostname of the OpenShift master node", :type => :string, :required => ENV["OPENSHIFT_HOSTNAME"].nil?, :default => ENV["OPENSHIFT_HOSTNAME"]
-    opt :port, "Port of the OpenShift master node", :type => :int, :required => false, :default => (ENV["OPENSHIFT_PORT"] || 8443).to_i
-    opt :ingress_api, "Hostname of the ingress-api route", :type => :string, :default => ENV["INGRESS_API"] || "http://localhost:9292"
-    opt :token, "Auth token to the OpenShift cluster", :type => :string, :required => ENV["OPENSHIFT_TOKEN"].nil?, :default => ENV["OPENSHIFT_TOKEN"]
+    opt :scheme, "Protocol scheme for connecting to the Openshift master node, default: https",
+      :type => :string, :required => ENV["ENDPOINT_SCHEME"].nil?, :default => (ENV["ENDPOINT_SCHEME"] || "https")
+    opt :host, "IP address or hostname of the Openshift master node",
+      :type => :string, :required => ENV["ENDPOINT_HOST"].nil?, :default => ENV["ENDPOINT_HOST"]
+    opt :port, "Port of the OpenShift master node, default: 8443",
+      :type => :int, :required => false, :default => (ENV["ENDPOINT_PORT"] || 8443).to_i
+    opt :path, "Path to the kubernetes API, default: /api",
+      :type => :string, :required => ENV["ENDPOINT_PATH"].nil?, :default => (ENV["ENDPOINT_PATH"] || "/api")
+    opt :token, "Auth token to the OpenShift cluster",
+      :type => :string, :required => ENV["AUTH_PASSWORD"].nil?, :default => ENV["AUTH_PASSWORD"]
+    opt :ingress_api, "Hostname of the ingress-api route",
+      :type => :string, :default => ENV["INGRESS_API"] || "http://localhost:9292"
   end
 
   opts
@@ -26,5 +34,5 @@ ingress_api_uri = URI(args[:ingress_api])
 TopologicalInventoryIngressApiClient.configure.scheme = ingress_api_uri.scheme || "http"
 TopologicalInventoryIngressApiClient.configure.host   = "#{ingress_api_uri.host}:#{ingress_api_uri.port}"
 
-collector = TopologicalInventory::Openshift::Collector.new(args[:source], args[:hostname], args[:port], args[:token])
+collector = TopologicalInventory::Openshift::Collector.new(args[:source], args[:host], args[:port], args[:token])
 collector.collect!
