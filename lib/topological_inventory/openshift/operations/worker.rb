@@ -61,11 +61,17 @@ module TopologicalInventory
           context = {
             :service_instance => {
               :source_id  => source.id,
-              :source_ref => parsed_response['metadata']['selfLink']
+              :source_ref => parsed_response.dig(:metadata, :selfLink)
             }
           }
 
-          task = TopologicalInventoryApiClient::Task.new("status" => "completed", "context" => context)
+          update_task(task_id, state: "completed", status: "ok", context: context)
+        rescue => err
+          update_task(task_id, state: "completed", status: "error", context: {:error => err.to_s})
+        end
+
+        def update_task(task_id, state:, status:, context:)
+          task = TopologicalInventoryApiClient::Task.new("state" => state, "status" => status, "context" => context.to_json)
           api_client.update_task(task_id, task)
         end
 

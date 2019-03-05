@@ -50,7 +50,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       allow(
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
       ).to receive(:new).with(source.id).and_return(service_catalog_client)
-      allow(service_catalog_client).to receive(:order_service_plan).and_return({'metadata' => {'selfLink' => 'source_ref'}})
+      allow(service_catalog_client).to receive(:order_service_plan).and_return({:metadata => {:selfLink => 'source_ref'}})
 
       stub_request(:patch, task_url).with(:headers => headers)
     end
@@ -61,15 +61,16 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     end
 
     it "makes a patch request to the update task endpoint with the status and context" do
-      context = {
+      expected_context = {
         :service_instance => {
           :source_id  => source.id,
           :source_ref => "source_ref"
         }
-      }
+      }.to_json
+
       described_class.new.run
       expect(
-        a_request(:patch, task_url).with(:body => {"status" => "completed", "context" => context})
+        a_request(:patch, task_url).with(:body => {"status" => "ok", "state" => "completed", "context" => expected_context})
       ).to have_been_made
     end
   end
