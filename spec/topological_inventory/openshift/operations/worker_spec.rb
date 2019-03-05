@@ -4,7 +4,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
   let(:client) { double(:client) }
 
   describe "#run" do
-    let(:messages) { [ManageIQ::Messaging::ReceivedMessage.new(nil, nil, payload, nil)] }
+    let(:messages) { [ManageIQ::Messaging::ReceivedMessage.new(nil, "ServicePlan.order", payload, nil)] }
     let(:task) { double("Task", :id => 1) }
 
     let(:service_plan) do
