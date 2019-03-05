@@ -13,6 +13,7 @@ module TopologicalInventory
         include Logging
 
         def initialize(messaging_client_opts = {})
+          self.api_client            = TopologicalInventoryApiClient::DefaultApi.new
           self.messaging_client_opts = default_messaging_opts.merge(messaging_client_opts)
         end
 
@@ -36,7 +37,7 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :messaging_client_opts, :client
+        attr_accessor :messaging_client_opts, :client, :api_client
 
         def process_message(_client, msg)
           logger.info("Processing order service with msg: #{msg.payload}")
@@ -66,9 +67,8 @@ module TopologicalInventory
         end
 
         def update_task(task_id, context)
-          api_instance = TopologicalInventoryApiClient::DefaultApi.new
           task = TopologicalInventoryApiClient::Task.new("status" => "completed", "context" => context)
-          api_instance.update_task(task_id, task)
+          api_client.update_task(task_id, task)
         end
 
         def queue_opts
