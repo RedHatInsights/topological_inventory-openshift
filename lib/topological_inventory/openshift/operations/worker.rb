@@ -1,9 +1,6 @@
 require "manageiq-messaging"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/core/service_catalog_client"
-require "topological_inventory/openshift/operations/core/service_offering_retriever"
-require "topological_inventory/openshift/operations/core/service_plan_retriever"
-require "topological_inventory/openshift/operations/core/source_retriever"
 require "topological_inventory-api-client"
 
 module TopologicalInventory
@@ -54,9 +51,9 @@ module TopologicalInventory
           task_id         = payload["task_id"].to_s
           order_params    = payload["order_params"]
 
-          service_plan = Core::ServicePlanRetriever.new(service_plan_id).process
-          source = Core::SourceRetriever.new(service_plan.source_id).process
-          service_offering = Core::ServiceOfferingRetriever.new(service_plan.service_offering_id).process
+          service_plan = api_client.show_service_plan(service_plan_id)
+          source = api_client.show_source(service_plan.source_id)
+          service_offering = api_client.show_service_offering(service_plan.service_offering_id)
 
           catalog_client = Core::ServiceCatalogClient.new(source.id)
           parsed_response = catalog_client.order_service_plan(service_plan.name, service_offering.name, order_params)
