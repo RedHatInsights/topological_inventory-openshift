@@ -1,10 +1,12 @@
-require "topological_inventory/openshift/operations/core/retriever"
-
 module TopologicalInventory
   module Openshift
     module Operations
       module Core
-        class AuthenticationRetriever < Retriever
+        class AuthenticationRetriever
+          def initialize(id)
+            @id = id.to_s
+          end
+
           def process
             headers = {
               "Content-Type" => "application/json"

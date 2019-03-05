@@ -6,10 +6,7 @@ module TopologicalInventory
       module Core
         RSpec.describe ServiceCatalogClient do
           let(:subject) { described_class.new("123") }
-
           let(:auth) { instance_double("Authentication", :password => "token") }
-
-          let(:source_endpoints_retriever) { instance_double("SourceEndpointsRetriever") }
           let(:authentication_retriever) { instance_double("AuthenticationRetriever") }
 
           let(:endpoints_url) { "https://virtserver.swaggerhub.com/r/insights/platform/topological-inventory/v0.1/sources/123/endpoints" }
