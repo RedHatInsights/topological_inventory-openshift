@@ -19,7 +19,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:service_offering) do
       TopologicalInventoryApiClient::ServiceOffering.new(:id => "456", :name => "service_offering")
     end
-    let(:payload) { {"service_plan_id" => service_plan.id, "order_params" => "order_params", "task_id" => task.id} }
+    let(:payload) { {"service_plan_id" => service_plan.id.to_s, "order_params" => "order_params", "task_id" => task.id.to_s} }
 
     let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
     let(:base_url_path) { "https://virtserver.swaggerhub.com/r/insights/platform/topological-inventory/v0.1/" }
@@ -50,7 +50,22 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       allow(
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
       ).to receive(:new).with(source.id).and_return(service_catalog_client)
-      allow(service_catalog_client).to receive(:order_service_plan).and_return({:metadata => {:selfLink => 'source_ref'}})
+
+      allow(service_catalog_client).to receive(:order_service_plan).
+        and_return(
+          Kubeclient::Resource.new(
+            :metadata => {
+              :uid => "af01c63c-e479-4190-8054-9c5ba2e9ec81"
+            },
+            :status => {
+              :conditions => [
+                Kubeclient::Resource.new(
+                  :reason => "ProvisionedSuccessfully"
+                )
+              ]
+            }
+          )
+        )
 
       stub_request(:patch, task_url).with(:headers => headers)
     end
@@ -64,7 +79,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       expected_context = {
         :service_instance => {
           :source_id  => source.id,
-          :source_ref => "source_ref"
+          :source_ref => "af01c63c-e479-4190-8054-9c5ba2e9ec81"
         }
       }.to_json
 
