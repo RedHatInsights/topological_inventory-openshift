@@ -1,6 +1,6 @@
-require "rest_client"
+require 'more_core_extensions/core_ext/hash'
+require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/operations/core/authentication_retriever"
-require "topological_inventory/openshift/operations/core/service_plan_client"
 require "topological_inventory-api-client"
 
 module TopologicalInventory
@@ -8,57 +8,51 @@ module TopologicalInventory
     module Operations
       module Core
         class ServiceCatalogClient
+          attr_accessor :default_endpoint, :authentication, :connection_manager
+
           def initialize(source_id)
             api_client = TopologicalInventoryApiClient::DefaultApi.new
 
             all_source_endpoints = api_client.list_source_endpoints(source_id)
-            @default_endpoint = all_source_endpoints.data.find { |endpoint| endpoint.default }
+            self.default_endpoint = all_source_endpoints.data.find { |endpoint| endpoint.default }
 
-            authentication_id = api_client.list_endpoint_authentications(@default_endpoint.id.to_s).data.first&.id
+            authentication_id = api_client.list_endpoint_authentications(default_endpoint.id.to_s).data.first&.id
+            self.authentication = AuthenticationRetriever.new(authentication_id).process
 
-            @authentication = AuthenticationRetriever.new(authentication_id).process
+            self.connection_manager = TopologicalInventory::Openshift::Connection.new
           end
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)
-            payload = ServicePlanClient.new.build_payload(plan_name, service_offering_name, additional_parameters)
-            response = external_request(:post, order_service_plan_url, payload)
-            JSON.parse(response.body)
+            connection = connection_manager.connect(
+              "servicecatalog", host: default_endpoint.host, token: authentication.password, verify_ssl: verify_ssl_mode)
+
+            payload = build_payload(plan_name, service_offering_name, additional_parameters)
+            connection.create_service_instance(payload)
           end
 
           private
 
-          def order_service_plan_url
-            base_url_path = URI::Generic.build(
-              :scheme => @default_endpoint.scheme,
-              :host   => @default_endpoint.host,
-              :port   => @default_endpoint.port,
-              :path   => @default_endpoint.path
-            ).to_s
-            URI.join(base_url_path, "apis/servicecatalog.k8s.io/v1beta1/namespaces/default/serviceinstances").to_s
-          end
+          def build_payload(service_plan_name, service_offering_name, order_parameters)
+            # We need to not send empty strings in case the parameter is generated
+            # More details are explained in the comment in the OpenShift web catalog
+            # https://github.com/openshift/origin-web-catalog/blob/4c5cb3ee1ae0061ed28fc6190a0f8fff71771122/src/components/order-service/order-service.controller.ts#L442
+            safe_params = order_parameters["service_parameters"].delete_blanks
 
-          def external_request(method, url, payload, headers = generic_headers)
-            request_options = {
-              :method     => method,
-              :url        => url,
-              :headers    => headers,
-              :verify_ssl => verify_ssl_mode,
-              :payload    => payload
-            }
-
-            RestClient::Request.new(request_options).execute
-          end
-
-          def generic_headers
             {
-              "Authorization" => "Bearer #{@authentication.password}",
-              "Content-Type"  => "application/json",
-              "Accept"        => "application/json"
+              :metadata   => {
+                :name      => "#{service_offering_name}-#{SecureRandom.uuid}",
+                :namespace => order_parameters["provider_control_parameters"]["namespace"]
+              },
+              :spec       => {
+                :clusterServiceClassExternalName => service_offering_name,
+                :clusterServicePlanExternalName  => service_plan_name,
+                :parameters                      => safe_params
+              }
             }
           end
 
           def verify_ssl_mode
-            @default_endpoint.verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
+            default_endpoint.verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
           end
         end
       end
