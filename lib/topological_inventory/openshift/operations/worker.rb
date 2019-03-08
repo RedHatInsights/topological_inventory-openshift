@@ -47,25 +47,29 @@ module TopologicalInventory
         end
 
         def order_service(payload)
-          service_plan_id = payload["service_plan_id"].to_s
-          task_id         = payload["task_id"].to_s
-          order_params    = payload["order_params"]
+          task_id, service_plan_id, order_params = payload.values_at("task_id", "service_plan_id", "order_params")
 
-          service_plan = api_client.show_service_plan(service_plan_id)
-          source = api_client.show_source(service_plan.source_id)
+          service_plan     = api_client.show_service_plan(service_plan_id)
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
 
-          catalog_client = Core::ServiceCatalogClient.new(source.id)
-          parsed_response = catalog_client.order_service_plan(service_plan.name, service_offering.name, order_params)
+          catalog_client = Core::ServiceCatalogClient.new(service_plan.source_id)
+
+          logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
+          service_instance = catalog_client.order_service_plan(
+            service_plan.name, service_offering.name, order_params)
+          logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
 
           context = {
             :service_instance => {
-              :source_id  => source.id,
-              :source_ref => parsed_response.dig(:metadata, :selfLink)
+              :source_id  => service_plan.source_id,
+              :source_ref => service_instance.metadata&.uid
             }
           }
 
-          update_task(task_id, state: "completed", status: "ok", context: context)
+          reason = service_instance.status.conditions.first&.reason
+          status = reason == "ProvisionedSuccessfully" ? "ok" : "error"
+
+          update_task(task_id, state: "completed", status: status, context: context)
         rescue => err
           update_task(task_id, state: "completed", status: "error", context: {:error => err.to_s})
         end

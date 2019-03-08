@@ -1,4 +1,5 @@
 require 'more_core_extensions/core_ext/hash'
+require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/operations/core/authentication_retriever"
 require "topological_inventory-api-client"
@@ -8,9 +9,13 @@ module TopologicalInventory
     module Operations
       module Core
         class ServiceCatalogClient
-          attr_accessor :default_endpoint, :authentication, :connection_manager
+          include Logging
+
+          attr_accessor :default_endpoint, :authentication, :connection_manager, :sleep_poll
 
           def initialize(source_id)
+            self.sleep_poll = 10
+
             api_client = TopologicalInventoryApiClient::DefaultApi.new
 
             all_source_endpoints = api_client.list_source_endpoints(source_id)
@@ -27,7 +32,14 @@ module TopologicalInventory
               "servicecatalog", host: default_endpoint.host, token: authentication.password, verify_ssl: verify_ssl_mode)
 
             payload = build_payload(plan_name, service_offering_name, additional_parameters)
-            connection.create_service_instance(payload)
+
+            service_instance = connection.create_service_instance(payload)
+
+            logger.info("Waiting for #{service_instance.metadata.name} to provision...")
+            service_instance = wait_for_provision_complete(connection, service_instance)
+            logger.info("Waiting for #{service_instance.metadata.name} to provision...Complete")
+
+            service_instance
           end
 
           private
@@ -49,6 +61,29 @@ module TopologicalInventory
                 :parameters                      => safe_params
               }
             }
+          end
+
+          def wait_for_provision_complete(connection, service_instance)
+            loop do
+              sleep(sleep_poll)
+
+              service_instance = connection.get_service_instance(
+                service_instance.metadata.name,
+                service_instance.metadata.namespace
+              )
+
+              condition = service_instance.status.conditions.first
+              logger.info("#{service_instance.metadata.name}: message [#{condition.message}] status [#{condition.status}] reason [#{condition.reason}]")
+
+              break unless service_instance_provisioning?(service_instance)
+            end
+
+            service_instance
+          end
+
+          def service_instance_provisioning?(service_instance)
+            reason = service_instance.status.conditions.first&.reason
+            %w(Provisioning ProvisionRequestInFlight).include?(reason)
           end
 
           def verify_ssl_mode
