@@ -1,5 +1,5 @@
 RSpec.describe TopologicalInventory::Openshift::Parser do
-  let(:parser) { described_class.new(openshift_host: "localhost") }
+  let(:parser) { described_class.new(:openshift_host => "localhost") }
 
   context "#parse_base_item" do
     let(:entity) do
@@ -7,7 +7,7 @@ RSpec.describe TopologicalInventory::Openshift::Parser do
         :metadata => {
           :name            => "my-entity",
           :resourceVersion => "1",
-          :uid             => "db590ed3-e74d-41ce-a3ec-5a9ea24c1eb9",
+          :uid             => "db590ed3-e74d-41ce-a3ec-5a9ea24c1eb9"
         }
       )
     end
@@ -41,7 +41,7 @@ RSpec.describe TopologicalInventory::Openshift::Parser do
 
   context "#lazy_find" do
     it "creates an InventoryObjectLazy object" do
-      lazy_ref = parser.send(:lazy_find, parser.collections[:container_groups], {:source_ref => "abcd"})
+      lazy_ref = parser.send(:lazy_find, parser.collections[:container_groups], :source_ref => "abcd")
       expect(lazy_ref).to be_a(TopologicalInventoryIngressApiClient::InventoryObjectLazy)
       expect(lazy_ref.inventory_collection_name.name).to eq(:container_groups)
       expect(lazy_ref.reference).to                      eq(:source_ref => "abcd")
