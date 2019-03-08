@@ -14,8 +14,8 @@ module TopologicalInventory::Openshift
 
         container_node = collections.container_nodes.build(
           parse_base_item(node).merge(
-            :cpus   => cpus,
-            :memory => memory,
+            :cpus     => cpus,
+            :memory   => memory,
             :lives_on => vm_cross_link(node.spec.providerID),
           )
         )
@@ -48,7 +48,7 @@ module TopologicalInventory::Openshift
         _, instance_uri = provider_id.split("://", 2)
         uid_ems = instance_uri.split("/").last
 
-        lazy_find(:cross_link_vms, {:uid_ems => uid_ems})
+        lazy_find(:cross_link_vms, :uid_ems => uid_ems)
       end
     end
   end

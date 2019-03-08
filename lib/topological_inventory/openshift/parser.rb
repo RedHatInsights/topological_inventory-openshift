@@ -40,7 +40,7 @@ module TopologicalInventory::Openshift
         :resource_version   => entity.metadata.resourceVersion,
         :resource_timestamp => resource_timestamp,
         :source_created_at  => entity.metadata.creationTimestamp,
-        :source_ref         => entity.metadata.uid,
+        :source_ref         => entity.metadata.uid
       }
     end
 
@@ -82,7 +82,7 @@ module TopologicalInventory::Openshift
 
       begin
         quantity.iec_60027_2_to_i
-      rescue
+      rescue StandardError
         quantity.decimal_si_to_f
       end
     end

@@ -19,7 +19,7 @@ module TopologicalInventory
             api_client = TopologicalInventoryApiClient::DefaultApi.new
 
             all_source_endpoints = api_client.list_source_endpoints(source_id)
-            self.default_endpoint = all_source_endpoints.data.find { |endpoint| endpoint.default }
+            self.default_endpoint = all_source_endpoints.data.find(&:default)
 
             authentication_id = api_client.list_endpoint_authentications(default_endpoint.id.to_s).data.first&.id
             self.authentication = AuthenticationRetriever.new(authentication_id).process
@@ -29,7 +29,8 @@ module TopologicalInventory
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)
             connection = connection_manager.connect(
-              "servicecatalog", host: default_endpoint.host, token: authentication.password, verify_ssl: verify_ssl_mode)
+              "servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
+            )
 
             payload = build_payload(plan_name, service_offering_name, additional_parameters)
 
@@ -51,11 +52,11 @@ module TopologicalInventory
             safe_params = order_parameters["service_parameters"].delete_blanks
 
             {
-              :metadata   => {
+              :metadata => {
                 :name      => "#{service_offering_name}-#{SecureRandom.uuid}",
                 :namespace => order_parameters["provider_control_parameters"]["namespace"]
               },
-              :spec       => {
+              :spec     => {
                 :clusterServiceClassExternalName => service_offering_name,
                 :clusterServicePlanExternalName  => service_plan_name,
                 :parameters                      => safe_params
@@ -83,7 +84,7 @@ module TopologicalInventory
 
           def service_instance_provisioning?(service_instance)
             reason = service_instance.status.conditions.first&.reason
-            %w(Provisioning ProvisionRequestInFlight).include?(reason)
+            %w[Provisioning ProvisionRequestInFlight].include?(reason)
           end
 
           def verify_ssl_mode

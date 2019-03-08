@@ -38,9 +38,9 @@ module TopologicalInventory
 
         def process_message(_client, msg)
           logger.info("Processing #{msg.message} with msg: #{msg.payload}")
-          #TODO: Move to separate module later when more message types are expected aside from just ordering
+          # TODO: Move to separate module later when more message types are expected aside from just ordering
           order_service(msg.payload)
-        rescue => e
+        rescue StandardError => e
           logger.error(e.message)
           logger.error(e.backtrace.join("\n"))
           nil
@@ -56,7 +56,8 @@ module TopologicalInventory
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
-            service_plan.name, service_offering.name, order_params)
+            service_plan.name, service_offering.name, order_params
+          )
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
 
           context = {
@@ -69,9 +70,9 @@ module TopologicalInventory
           reason = service_instance.status.conditions.first&.reason
           status = reason == "ProvisionedSuccessfully" ? "ok" : "error"
 
-          update_task(task_id, state: "completed", status: status, context: context)
-        rescue => err
-          update_task(task_id, state: "completed", status: "error", context: {:error => err.to_s})
+          update_task(task_id, :state => "completed", :status => status, :context => context)
+        rescue StandardError => err
+          update_task(task_id, :state => "completed", :status => "error", :context => {:error => err.to_s})
         end
 
         def update_task(task_id, state:, status:, context:)
@@ -81,7 +82,7 @@ module TopologicalInventory
 
         def queue_opts
           {
-            :service => "platform.topological-inventory.operations-openshift",
+            :service => "platform.topological-inventory.operations-openshift"
           }
         end
 
@@ -89,7 +90,7 @@ module TopologicalInventory
           {
             :protocol   => :Kafka,
             :client_ref => "openshift-operations-worker",
-            :group_ref  => "openshift-operations-worker",
+            :group_ref  => "openshift-operations-worker"
           }
         end
       end

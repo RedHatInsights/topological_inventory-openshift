@@ -18,7 +18,7 @@ module TopologicalInventory::Openshift
       params.merge!(:host => host, :port => port, :token => token, :verify_ssl => verify_ssl)
 
       open(*params.values_at(:host, :port, :path, :api_version, :token, :verify_ssl))
-    rescue => err
+    rescue StandardError => err
       connection_failure_time[endpoint_type] = Time.now.utc
       raise
     end
@@ -28,7 +28,7 @@ module TopologicalInventory::Openshift
     attr_accessor :connection_failure_time
 
     def valid_endpoint_types
-      %w(kubernetes openshift servicecatalog)
+      %w[kubernetes openshift servicecatalog]
     end
 
     def connect_params(endpoint_type)
@@ -50,7 +50,7 @@ module TopologicalInventory::Openshift
         :auth_options => {:bearer_token => token}
       }
 
-      Kubeclient::Client.new(endpoint_uri, api_version, options).tap { |c| c.discover }
+      Kubeclient::Client.new(endpoint_uri, api_version, options).tap(&:discover)
     end
   end
 end

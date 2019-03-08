@@ -12,7 +12,7 @@ module TopologicalInventory::Openshift
 
       def parse_cluster_service_class(service_class)
         @icons_cache ||= Set.new
-        icon_class   = (service_class.spec&.externalMetadata || {})["console.openshift.io/iconClass"]
+        icon_class = (service_class.spec&.externalMetadata || {})["console.openshift.io/iconClass"]
         @icons_cache << icon_class
 
         service_offering = collections.service_offerings.build(
@@ -64,6 +64,7 @@ module TopologicalInventory::Openshift
         request          = Net::HTTP::Get.new(uri.path)
         body = http.request(request).body
         return unless body.start_with?("<svg") # We allow only svg icons
+
         body
       end
 

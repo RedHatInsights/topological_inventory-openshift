@@ -51,13 +51,13 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
       ).to receive(:new).with(source.id).and_return(service_catalog_client)
 
-      allow(service_catalog_client).to receive(:order_service_plan).
-        and_return(
+      allow(service_catalog_client).to receive(:order_service_plan)
+        .and_return(
           Kubeclient::Resource.new(
             :metadata => {
               :uid => "af01c63c-e479-4190-8054-9c5ba2e9ec81"
             },
-            :status => {
+            :status   => {
               :conditions => [
                 Kubeclient::Resource.new(
                   :reason => "ProvisionedSuccessfully"

@@ -25,7 +25,7 @@ module TopologicalInventory::Openshift
     def collect!
       start_collector_threads
 
-      until finished? do
+      until finished?
         ensure_collector_threads
 
         notices = []
@@ -53,7 +53,7 @@ module TopologicalInventory::Openshift
 
     def ensure_collector_threads
       entity_types.each do |entity_type|
-        next if collector_threads[entity_type] && collector_threads[entity_type].alive?
+        next if collector_threads[entity_type]&.alive?
 
         collector_threads[entity_type] = start_collector_thread(entity_type)
       end
@@ -68,7 +68,7 @@ module TopologicalInventory::Openshift
       Thread.new do
         collector_thread(connection, entity_type)
       end
-    rescue => err
+    rescue StandardError => err
       logger.error(err)
       nil
     end
@@ -80,7 +80,7 @@ module TopologicalInventory::Openshift
         logger.info("#{entity_type} #{notice.object.metadata.name} was #{notice.type.downcase}")
         queue.push(notice)
       end
-    rescue => err
+    rescue StandardError => err
       logger.error(err)
     end
 
@@ -123,7 +123,7 @@ module TopologicalInventory::Openshift
 
       logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
-    rescue => e
+    rescue StandardError => e
       logger.error("Error collecting :#{entity_type}, message => #{e.message}")
       raise e
     end
@@ -142,7 +142,7 @@ module TopologicalInventory::Openshift
       save_inventory(parser.collections.values)
     end
 
-    def save_inventory(collections, refresh_state_uuid=nil, refresh_state_part_uuid=nil)
+    def save_inventory(collections, refresh_state_uuid = nil, refresh_state_part_uuid = nil)
       return if collections.empty?
 
       ingress_api_client.save_inventory(
@@ -176,19 +176,19 @@ module TopologicalInventory::Openshift
     end
 
     def kubernetes_entity_types
-      %w(namespaces pods nodes)
+      %w[namespaces pods nodes]
     end
 
     def openshift_entity_types
-      %w(templates images)
+      %w[templates images]
     end
 
     def servicecatalog_entity_types
-      %w(cluster_service_classes cluster_service_plans service_instances)
+      %w[cluster_service_classes cluster_service_plans service_instances]
     end
 
     def endpoint_types
-      %w(kubernetes openshift servicecatalog)
+      %w[kubernetes openshift servicecatalog]
     end
 
     def connection_for_entity_type(entity_type)
