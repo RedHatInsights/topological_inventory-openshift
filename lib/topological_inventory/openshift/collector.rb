@@ -176,7 +176,7 @@ module TopologicalInventory::Openshift
     end
 
     def kubernetes_entity_types
-      %w[namespaces pods nodes]
+      %w[namespaces pods nodes resource_quotas]
     end
 
     def openshift_entity_types

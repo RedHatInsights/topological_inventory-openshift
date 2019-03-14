@@ -7,16 +7,35 @@ module TopologicalInventory::Openshift
       end
 
       def parse_node(node)
+        node_info = node.spec.to_h
+
         if node.status
-          cpus = node.status.capacity&.cpu
+          cpus   = parse_quantity(node.status.capacity&.cpu)
           memory = parse_quantity(node.status.capacity&.memory)
+          pods   = node.status.capacity&.pods
+
+          allocatable_cpus   = parse_quantity(node.status.allocatable&.cpu)
+          allocatable_memory = parse_quantity(node.status.allocatable&.memory)
+          allocatable_pods   = parse_quantity(node.status.allocatable&.pods)
+
+          conditions = (node.status&.conditions || []).map(&:to_h)
+          addresses  = (node.status&.addresses || []).map(&:to_h)
+
+          node_info.merge!(node.status&.nodeInfo&.to_h || {})
         end
 
         container_node = collections.container_nodes.build(
           parse_base_item(node).merge(
-            :cpus     => cpus,
-            :memory   => memory,
-            :lives_on => vm_cross_link(node.spec.providerID),
+            :cpus               => cpus,
+            :memory             => memory,
+            :pods               => pods,
+            :allocatable_cpus   => allocatable_cpus,
+            :allocatable_memory => allocatable_memory,
+            :allocatable_pods   => allocatable_pods,
+            :conditions         => conditions,
+            :addresses          => addresses,
+            :node_info          => node_info,
+            :lives_on           => vm_cross_link(node.spec.providerID),
           )
         )
 
