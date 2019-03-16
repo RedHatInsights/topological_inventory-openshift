@@ -8,7 +8,9 @@ module TopologicalInventory::Openshift
 
       def parse_namespace(namespace)
         container_project = collections.container_projects.build(
-          parse_base_item(namespace)
+          parse_base_item(namespace).merge(
+            :status_phase => namespace.status&.phase
+          )
         )
 
         parse_namespace_tags(container_project.source_ref, namespace.metadata&.labels&.to_h)

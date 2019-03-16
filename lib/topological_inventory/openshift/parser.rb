@@ -6,6 +6,7 @@ require "topological_inventory/openshift/parser/image"
 require "topological_inventory/openshift/parser/pod"
 require "topological_inventory/openshift/parser/namespace"
 require "topological_inventory/openshift/parser/node"
+require "topological_inventory/openshift/parser/resource_quota"
 require "topological_inventory/openshift/parser/template"
 require "topological_inventory/openshift/parser/cluster_service_class"
 require "topological_inventory/openshift/parser/cluster_service_plan"
@@ -18,6 +19,7 @@ module TopologicalInventory::Openshift
     include Pod
     include Namespace
     include Node
+    include ResourceQuota
     include Template
     include ClusterServiceClass
     include ClusterServicePlan
