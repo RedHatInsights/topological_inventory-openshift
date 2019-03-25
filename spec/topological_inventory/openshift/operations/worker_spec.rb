@@ -22,7 +22,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:payload) { {"service_plan_id" => service_plan.id.to_s, "order_params" => "order_params", "task_id" => task.id.to_s} }
 
     let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
-    let(:base_url_path) { "https://virtserver.swaggerhub.com/r/insights/platform/topological-inventory/v0.1/" }
+    let(:base_url_path) { "https://virtserver.swaggerhub.com/api/topological-inventory/v0.1/" }
     let(:service_plan_url) { URI.join(base_url_path, "service_plans/#{service_plan.id}").to_s }
     let(:source_url) { URI.join(base_url_path, "sources/#{source.id}").to_s }
     let(:service_offering_url) { URI.join(base_url_path, "service_offerings/#{service_offering.id}").to_s }
