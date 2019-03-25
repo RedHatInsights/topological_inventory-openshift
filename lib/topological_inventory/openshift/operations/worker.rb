@@ -12,6 +12,7 @@ module TopologicalInventory
         def initialize(messaging_client_opts = {})
           self.api_client            = TopologicalInventoryApiClient::DefaultApi.new
           self.messaging_client_opts = default_messaging_opts.merge(messaging_client_opts)
+          self.sleep_poll            = 10
         end
 
         def run
@@ -34,7 +35,7 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :messaging_client_opts, :client, :api_client
+        attr_accessor :messaging_client_opts, :client, :api_client, :sleep_poll
 
         def process_message(_client, msg)
           logger.info("Processing #{msg.message} with msg: #{msg.payload}")
@@ -83,27 +84,19 @@ module TopologicalInventory
             }
           }
 
-          reason = service_instance.status.conditions.first&.reason
-          status = reason == "ProvisionedSuccessfully" ? "ok" : "error"
-
-          if status == "ok"
-            api_link = nil
-            while api_link.nil?
-              svc_instances = svc_instance_by_source_ref(service_offering.source_id,
-                                                         service_instance.spec&.externalID)
-
-              if svc_instances.meta.count > 0
-                svc_instance_id = svc_instances.data.first&.id
-                rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance_id.to_s)
-                api_link = api_client.api_client.build_request(:GET, rest_api_path).url
-                # Adds URL to context
-                context[:service_instance][:url] = api_link
-              else
-                sleep(10)
-              end
-            end
+          if provisioning_status(service_instance) == "ok"
+            context[:service_instance][:url] = svc_instance_url(service_offering, service_instance)
           end
+
           context
+        end
+
+        def svc_instance_url(service_offering, service_instance)
+          svc_instance = svc_instance_by_source_ref(service_offering.source_id,
+                                                    service_instance.spec&.externalID)
+
+          rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance&.id.to_s)
+          api_client.api_client.build_request(:GET, rest_api_path).url
         end
 
         def provisioning_status(service_instance)
@@ -121,19 +114,28 @@ module TopologicalInventory
           end
 
           header_params = { 'Accept' => api.select_header_accept(['application/json']) }
-          query_params = { :'source_id'  => source_id, :'source_ref' => source_ref }
+          query_params = { :'source_id' => source_id, :'source_ref' => source_ref }
 
-          data, status_code, headers = api.call_api(:GET, "/service_instances",
-                                                    :header_params => header_params,
-                                                    :query_params  => query_params,
-                                                    :form_params   => {},
-                                                    :body          => nil,
-                                                    :auth_names    => ['UserSecurity'],
-                                                    :return_type   => 'ServiceInstancesCollection')
+          data, status_code, headers = nil, nil, nil
+          loop do
+            data, status_code, headers = api.call_api(:GET, "/service_instances",
+                                                      :header_params => header_params,
+                                                      :query_params  => query_params,
+                                                      :form_params   => {},
+                                                      :body          => nil,
+                                                      :auth_names    => ['UserSecurity'],
+                                                      :return_type   => 'ServiceInstancesCollection')
+
+            break if data.meta.count > 0
+
+            sleep(sleep_poll)
+          end
+
           if api.config.debugging
             api.config.logger.debug("API called: service_instances(by source_ref)\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}")
           end
-          data
+
+          data.data&.first
         end
 
         def queue_opts
