@@ -72,6 +72,8 @@ module TopologicalInventory
 
           update_task(task_id, :state => "completed", :status => status, :context => context)
         rescue StandardError => err
+          logger.error("Exception while ordering #{err}")
+          logger.error(err.backtrace.join("\n"))
           update_task(task_id, :state => "completed", :status => "error", :context => {:error => err.to_s})
         end
 
