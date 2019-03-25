@@ -17,8 +17,13 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       TopologicalInventoryApiClient::Source.new(:id => "321")
     end
     let(:service_offering) do
-      TopologicalInventoryApiClient::ServiceOffering.new(:id => "456", :name => "service_offering")
+      TopologicalInventoryApiClient::ServiceOffering.new(:id => "456", :name => "service_offering", :source_id => source.id)
     end
+
+    let(:service_instance) do
+      TopologicalInventoryApiClient::ServiceInstance.new(:id => "789", :name => "service_instance", :source_ref => "af01c63c-e479-4190-8054-9c5ba2e9ec81")
+    end
+
     let(:payload) { {"service_plan_id" => service_plan.id.to_s, "order_params" => "order_params", "task_id" => task.id.to_s} }
 
     let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
@@ -26,6 +31,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:service_plan_url) { URI.join(base_url_path, "service_plans/#{service_plan.id}").to_s }
     let(:source_url) { URI.join(base_url_path, "sources/#{source.id}").to_s }
     let(:service_offering_url) { URI.join(base_url_path, "service_offerings/#{service_offering.id}").to_s }
+    let(:service_instances_url) { URI.join(base_url_path, "service_instances?source_id=#{source.id}&source_ref=#{service_instance.source_ref}") }
     let(:task_url) { URI.join(base_url_path, "tasks/#{task.id}").to_s }
     let(:headers) { {"Content-Type" => "application/json"} }
 
@@ -46,6 +52,9 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       stub_request(:get, service_offering_url).with(:headers => headers).to_return(
         :headers => headers, :body => service_offering.to_json
       )
+      stub_request(:get, service_instances_url).with(:headers => headers).to_return(
+        :headers => headers, :body => {:meta => {:count => 1}, :data => [service_instance.to_hash]}.to_json
+      )
 
       allow(
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
@@ -54,10 +63,10 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       allow(service_catalog_client).to receive(:order_service_plan)
         .and_return(
           Kubeclient::Resource.new(
-            :metadata => {
-              :uid => "af01c63c-e479-4190-8054-9c5ba2e9ec81"
+            :spec   => {
+              :externalID => service_instance.source_ref
             },
-            :status   => {
+            :status => {
               :conditions => [
                 Kubeclient::Resource.new(
                   :reason => "ProvisionedSuccessfully"
@@ -79,7 +88,8 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       expected_context = {
         :service_instance => {
           :source_id  => source.id,
-          :source_ref => "af01c63c-e479-4190-8054-9c5ba2e9ec81"
+          :source_ref => service_instance.source_ref,
+          :url        => "#{base_url_path}service_instances/#{service_instance.id}"
         }
       }.to_json
 

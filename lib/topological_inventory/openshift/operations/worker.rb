@@ -60,15 +60,8 @@ module TopologicalInventory
           )
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
 
-          context = {
-            :service_instance => {
-              :source_id  => service_plan.source_id,
-              :source_ref => service_instance.metadata&.uid
-            }
-          }
-
-          reason = service_instance.status.conditions.first&.reason
-          status = reason == "ProvisionedSuccessfully" ? "ok" : "error"
+          context = svc_instance_context_with_url(service_offering, service_plan, service_instance )
+          status  = provisioning_status(service_instance)
 
           update_task(task_id, :state => "completed", :status => status, :context => context)
         rescue StandardError => err
@@ -80,6 +73,67 @@ module TopologicalInventory
         def update_task(task_id, state:, status:, context:)
           task = TopologicalInventoryApiClient::Task.new("state" => state, "status" => status, "context" => context.to_json)
           api_client.update_task(task_id, task)
+        end
+
+        def svc_instance_context_with_url(service_offering, service_plan, service_instance)
+          context = {
+            :service_instance => {
+              :source_id  => service_plan.source_id,
+              :source_ref => service_instance.spec&.externalID
+            }
+          }
+
+          reason = service_instance.status.conditions.first&.reason
+          status = reason == "ProvisionedSuccessfully" ? "ok" : "error"
+
+          if status == "ok"
+            api_link = nil
+            while api_link.nil?
+              svc_instances = svc_instance_by_source_ref(service_offering.source_id,
+                                                         service_instance.spec&.externalID)
+
+              if svc_instances.meta.count > 0
+                svc_instance_id = svc_instances.data.first&.id
+                rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance_id.to_s)
+                api_link = api_client.api_client.build_request(:GET, rest_api_path).url
+                # Adds URL to context
+                context[:service_instance][:url] = api_link
+              else
+                sleep(10)
+              end
+            end
+          end
+          context
+        end
+
+        def provisioning_status(service_instance)
+          reason = service_instance.status.conditions.first&.reason
+          reason == "ProvisionedSuccessfully" ? "ok" : "error"
+        end
+
+        # Current API client doesn't support source_id and source_ref filtering
+        # This is modified version of api_client.list_service_instances
+        def svc_instance_by_source_ref(source_id, source_ref)
+          api = api_client.api_client
+
+          if api.config.debugging
+            api.config.logger.debug('Calling API: service_instances(by source_ref)...')
+          end
+
+          header_params = { 'Accept' => api.select_header_accept(['application/json']) }
+          query_params = { :'source_id'  => source_id, :'source_ref' => source_ref }
+
+          data, status_code, headers = api.call_api(:GET, "/service_instances",
+                                                    :header_params => header_params,
+                                                    :query_params  => query_params,
+                                                    :form_params   => {},
+                                                    :body          => nil,
+                                                    :auth_names    => ['UserSecurity'],
+                                                    :return_type   => 'ServiceInstancesCollection')
+          if api.config.debugging
+            api.config.logger.debug("API called: service_instances(by source_ref)\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}")
+          end
+          data
         end
 
         def queue_opts
