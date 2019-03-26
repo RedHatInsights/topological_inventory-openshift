@@ -74,7 +74,7 @@ module TopologicalInventory
               )
 
               condition = service_instance.status.conditions.first
-              logger.info("#{service_instance.metadata.name}: message [#{condition.message}] status [#{condition.status}] reason [#{condition.reason}]")
+              logger.info("#{service_instance.metadata.name}: message [#{condition&.message}] status [#{condition&.status}] reason [#{condition&.reason}]")
 
               break unless service_instance_provisioning?(service_instance)
             end
