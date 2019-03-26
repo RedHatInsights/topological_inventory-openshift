@@ -1,4 +1,6 @@
 require "topological_inventory/openshift/operations/worker"
+require "base64"
+require "json"
 
 RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
   let(:client) { double(:client) }
@@ -16,6 +18,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:source) do
       TopologicalInventoryApiClient::Source.new(:id => "321")
     end
+    let(:external_tenant) { SecureRandom.uuid }
     let(:service_offering) do
       TopologicalInventoryApiClient::ServiceOffering.new(:id => "456", :name => "service_offering", :source_id => source.id)
     end
@@ -24,7 +27,14 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       TopologicalInventoryApiClient::ServiceInstance.new(:id => "789", :name => "service_instance", :source_ref => "af01c63c-e479-4190-8054-9c5ba2e9ec81")
     end
 
-    let(:payload) { {"service_plan_id" => service_plan.id.to_s, "order_params" => "order_params", "task_id" => task.id.to_s} }
+    let(:payload) do
+      {
+        "service_plan_id" => service_plan.id.to_s,
+        "order_params"    => "order_params",
+        "task_id"         => task.id.to_s,
+        "external_tenant" => external_tenant
+      }
+    end
 
     let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
     let(:base_url_path) { "https://virtserver.swaggerhub.com/api/topological-inventory/v0.1/" }
@@ -33,7 +43,8 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:service_offering_url) { URI.join(base_url_path, "service_offerings/#{service_offering.id}").to_s }
     let(:service_instances_url) { URI.join(base_url_path, "service_instances?source_id=#{source.id}&source_ref=#{service_instance.source_ref}") }
     let(:task_url) { URI.join(base_url_path, "tasks/#{task.id}").to_s }
-    let(:headers) { {"Content-Type" => "application/json"} }
+    let(:x_rh_identity) { Base64.encode64(JSON.dump("identity" => {"account_number" => external_tenant})) }
+    let(:headers) { {"Content-Type" => "application/json", "x-rh-identity" => x_rh_identity} }
 
     before do
       require "active_support/json"
