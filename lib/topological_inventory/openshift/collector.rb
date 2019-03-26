@@ -68,7 +68,11 @@ module TopologicalInventory::Openshift
       Thread.new do
         collector_thread(connection, entity_type)
       end
+    rescue Kubeclient::ResourceNotFoundError => err
+      logger.warn("Entity type '#{entity_type}' not found: #{err}")
+      nil
     rescue StandardError => err
+      logger.error("Error collecting entity type '#{entity_type}': #{err}")
       logger.error(err)
       nil
     end
@@ -81,6 +85,7 @@ module TopologicalInventory::Openshift
         queue.push(notice)
       end
     rescue StandardError => err
+      logger.error("Error collecting entity type '#{entity_type}': #{err}")
       logger.error(err)
     end
 
@@ -123,9 +128,6 @@ module TopologicalInventory::Openshift
 
       logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
-    rescue StandardError => e
-      logger.error("Error collecting :#{entity_type}, message => #{e.message}")
-      raise e
     end
 
     def targeted_refresh(notices)
