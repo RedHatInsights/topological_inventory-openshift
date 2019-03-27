@@ -41,15 +41,16 @@ module TopologicalInventory
         def process_message(client, msg)
           logger.info("Processing #{msg.message} with msg: #{msg.payload}")
           # TODO: Move to separate module later when more message types are expected aside from just ordering
-          order_service(client, msg)
+          order_service(msg.payload)
+          client.ack(msg.ack_ref)
         rescue StandardError => e
           logger.error(e.message)
           logger.error(e.backtrace.join("\n"))
           nil
         end
 
-        def order_service(client, msg)
-          task_id, service_plan_id, order_params = msg.payload.values_at("task_id", "service_plan_id", "order_params")
+        def order_service(payload)
+          task_id, service_plan_id, order_params = payload.values_at("task_id", "service_plan_id", "order_params")
 
           service_plan     = api_client.show_service_plan(service_plan_id)
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
@@ -61,7 +62,6 @@ module TopologicalInventory
           service_instance = catalog_client.order_service_plan(
             service_plan.name, service_offering.name, order_params
           )
-          client.ack(msg.ack_ref)
 
           name      = service_instance.metadata.name
           namespace = service_instance.metadata.namespace
