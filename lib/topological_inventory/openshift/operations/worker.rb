@@ -12,8 +12,7 @@ module TopologicalInventory
         def initialize(messaging_client_opts = {})
           self.api_client            = TopologicalInventoryApiClient::DefaultApi.new
           self.messaging_client_opts = default_messaging_opts.merge(messaging_client_opts)
-          self.sleep_poll            = 10   # seconds
-          self.poll_timeout          = 1800 # seconds
+          self.sleep_poll            = 10
         end
 
         def run
@@ -36,7 +35,7 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :messaging_client_opts, :client, :api_client, :sleep_poll, :poll_timeout
+        attr_accessor :messaging_client_opts, :client, :api_client, :sleep_poll
 
         def process_message(client, msg)
           logger.info("Processing #{msg.message} with msg: #{msg.payload}")
@@ -87,8 +86,7 @@ module TopologicalInventory
           }
 
           if provisioning_status(service_instance) == "ok"
-            url = svc_instance_url(service_offering, service_instance)
-            context[:service_instance][:url] = url if url.present?
+            context[:service_instance][:url] = svc_instance_url(service_offering, service_instance)
           end
 
           context
@@ -97,7 +95,6 @@ module TopologicalInventory
         def svc_instance_url(service_offering, service_instance)
           svc_instance = svc_instance_by_source_ref(service_offering.source_id,
                                                     service_instance.spec&.externalID)
-          return if svc_instance.nil?
 
           rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance&.id.to_s)
           api_client.api_client.build_request(:GET, rest_api_path).url
@@ -113,13 +110,14 @@ module TopologicalInventory
         def svc_instance_by_source_ref(source_id, source_ref)
           api = api_client.api_client
 
+          if api.config.debugging
+            api.config.logger.debug('Calling API: service_instances(by source_ref)...')
+          end
+
           header_params = { 'Accept' => api.select_header_accept(['application/json']) }
           query_params = { :'source_id' => source_id, :'source_ref' => source_ref }
 
-          count = 0
-          timeout_count = poll_timeout / sleep_poll
-
-          service_instance = nil
+          data, status_code, headers = nil, nil, nil
           loop do
             data, status_code, headers = api.call_api(:GET, "/service_instances",
                                                       :header_params => header_params,
@@ -129,18 +127,16 @@ module TopologicalInventory
                                                       :auth_names    => ['UserSecurity'],
                                                       :return_type   => 'ServiceInstancesCollection')
 
-            service_instance = data.data&.first if data.meta.count > 0
-            break if service_instance.present?
+            break if data.meta.count > 0
 
-            break if (count += 1) >= timeout_count
             sleep(sleep_poll)
           end
 
-          if service_instance.nil?
-            logger.error("Failed to find service_instance by source_id [#{source_id}] source_ref [#{source_ref}]")
+          if api.config.debugging
+            api.config.logger.debug("API called: service_instances(by source_ref)\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}")
           end
 
-          service_instance
+          data.data&.first
         end
 
         def queue_opts
