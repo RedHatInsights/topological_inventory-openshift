@@ -32,14 +32,11 @@ module TopologicalInventory
             connection.create_service_instance(payload)
           end
 
-          def wait_for_provision_complete(service_instance)
+          def wait_for_provision_complete(name, namespace)
             loop do
               sleep(sleep_poll)
 
-              service_instance = connection.get_service_instance(
-                service_instance.metadata.name,
-                service_instance.metadata.namespace
-              )
+              service_instance = connection.get_service_instance(name, namespace)
 
               condition = service_instance.status.conditions.first
               logger.info("#{service_instance.metadata.name}: message [#{condition&.message}] status [#{condition&.status}] reason [#{condition&.reason}]")

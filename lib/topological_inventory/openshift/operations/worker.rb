@@ -62,7 +62,11 @@ module TopologicalInventory
             service_plan.name, service_offering.name, order_params
           )
           client.ack(msg.ack_ref)
-          poll_order_complete(task_id, source_id, service_instance)
+
+          name      = service_instance.metadata.name
+          namespace = service_instance.metadata.namespace
+          poll_order_complete(task_id, source_id, name, namespace)
+
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
         rescue StandardError => err
           logger.error("Exception while ordering #{err}")
@@ -75,14 +79,20 @@ module TopologicalInventory
           api_client.update_task(task_id, task)
         end
 
-        def poll_order_complete(task_id, source_id, service_instance)
+        def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
           catalog_client = Core::ServiceCatalogClient.new(source_id)
-          catalog_client.wait_for_provision_complete(service_instance)
+          service_instance = catalog_client.wait_for_provision_complete(
+            service_instance_name, service_instance_namespace
+          )
 
           context = svc_instance_context_with_url(source_id, service_instance)
           status  = provisioning_status(service_instance)
 
           update_task(task_id, :state => "completed", :status => status, :context => context)
+        rescue StandardError => err
+          logger.error("Exception while ordering #{err}")
+          logger.error(err.backtrace.join("\n"))
+          update_task(task_id, :state => "completed", :status => "error", :context => {:error => err.to_s})
         end
 
         def svc_instance_context_with_url(source_id, service_instance)
