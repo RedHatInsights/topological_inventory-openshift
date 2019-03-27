@@ -3,8 +3,7 @@ require "topological_inventory/openshift/operations/worker"
 RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
   let(:client) { double(:client) }
 
-  describe "#run" do
-    let(:messages) { [ManageIQ::Messaging::ReceivedMessage.new(nil, "ServicePlan.order", payload, SecureRandom.uuid)] }
+  describe "#order_service (private)" do
     let(:task) { double("Task", :id => 1) }
 
     let(:service_plan) do
@@ -55,11 +54,6 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       require "active_support/json"
       require "active_support/core_ext/object/json" # required to get service_plan.to_json to work properly
 
-      allow(ManageIQ::Messaging::Client).to receive(:open).and_return(client)
-      allow(client).to receive(:close)
-      allow(client).to receive(:subscribe_messages).and_yield(messages)
-      allow(client).to receive(:ack)
-
       stub_request(:get, service_plan_url).with(:headers => headers).to_return(
         :headers => headers, :body => service_plan.to_json
       )
@@ -86,7 +80,8 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     it "orders the service via the service catalog client" do
       expect(service_catalog_client).to receive(:order_service_plan).with("plan_name", "service_offering", "order_params")
       expect(service_catalog_client).to receive(:wait_for_provision_complete).with(service_instance.metadata.name, service_instance.metadata.namespace)
-      described_class.new.run
+      thread = described_class.new.send(:order_service, payload)
+      thread.join
     end
 
     it "makes a patch request to the update task endpoint with the status and context" do
@@ -98,7 +93,9 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
         }
       }.to_json
 
-      described_class.new.run
+      thread = described_class.new.send(:order_service, payload)
+      thread.join
+
       expect(
         a_request(:patch, task_url).with(:body => {"status" => "ok", "state" => "completed", "context" => expected_context})
       ).to have_been_made

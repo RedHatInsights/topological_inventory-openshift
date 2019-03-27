@@ -58,16 +58,11 @@ module TopologicalInventory
 
           catalog_client = Core::ServiceCatalogClient.new(source_id)
 
-          logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
             service_plan.name, service_offering.name, order_params
           )
 
-          name      = service_instance.metadata.name
-          namespace = service_instance.metadata.namespace
-          poll_order_complete(task_id, source_id, name, namespace)
-
-          logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
+          poll_order_complete_thread(task_id, source_id, service_instance)
         rescue StandardError => err
           logger.error("Exception while ordering #{err}")
           logger.error(err.backtrace.join("\n"))
@@ -77,6 +72,13 @@ module TopologicalInventory
         def update_task(task_id, state:, status:, context:)
           task = TopologicalInventoryApiClient::Task.new("state" => state, "status" => status, "context" => context.to_json)
           api_client.update_task(task_id, task)
+        end
+
+        def poll_order_complete_thread(task_id, source_id, service_instance)
+          service_instance_name      = service_instance.metadata.name
+          service_instance_namespace = service_instance.metadata.namespace
+
+          Thread.new { poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace) }
         end
 
         def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
