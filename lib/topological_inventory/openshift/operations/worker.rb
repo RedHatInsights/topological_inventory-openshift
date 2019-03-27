@@ -22,7 +22,7 @@ module TopologicalInventory
 
           logger.info("Topological Inventory Openshift Operations worker started...")
 
-          client.subscribe_messages(queue_opts.merge(:max_bytes => 500000)) do |messages|
+          client.subscribe_messages(queue_opts) do |messages|
             messages.each { |msg| process_message(client, msg) }
           end
         ensure
@@ -61,6 +61,7 @@ module TopologicalInventory
             service_plan.name, service_offering.name, order_params
           )
           client.ack(msg.ack_ref)
+          catalog_client.wait_for_provision_complete(service_instance)
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
 
           context = svc_instance_context_with_url(service_offering, service_plan, service_instance )
@@ -145,7 +146,9 @@ module TopologicalInventory
 
         def queue_opts
           {
-            :service => "platform.topological-inventory.operations-openshift"
+            :auto_ack  => false,
+            :max_bytes => 50_000,
+            :service   => "platform.topological-inventory.operations-openshift"
           }
         end
 
