@@ -4,7 +4,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
   let(:client) { double(:client) }
 
   describe "#run" do
-    let(:messages) { [ManageIQ::Messaging::ReceivedMessage.new(nil, "ServicePlan.order", payload, nil)] }
+    let(:messages) { [ManageIQ::Messaging::ReceivedMessage.new(nil, "ServicePlan.order", payload, SecureRandom.uuid)] }
     let(:task) { double("Task", :id => 1) }
 
     let(:service_plan) do
@@ -42,6 +42,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
       allow(ManageIQ::Messaging::Client).to receive(:open).and_return(client)
       allow(client).to receive(:close)
       allow(client).to receive(:subscribe_messages).and_yield(messages)
+      allow(client).to receive(:ack)
 
       stub_request(:get, service_plan_url).with(:headers => headers).to_return(
         :headers => headers, :body => service_plan.to_json
