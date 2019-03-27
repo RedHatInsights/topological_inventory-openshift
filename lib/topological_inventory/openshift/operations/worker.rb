@@ -10,7 +10,6 @@ module TopologicalInventory
         include Logging
 
         def initialize(messaging_client_opts = {})
-          self.api_client            = TopologicalInventoryApiClient::DefaultApi.new
           self.messaging_client_opts = default_messaging_opts.merge(messaging_client_opts)
           self.sleep_poll            = 10   # seconds
           self.poll_timeout          = 1800 # seconds
@@ -36,7 +35,7 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :messaging_client_opts, :client, :api_client, :sleep_poll, :poll_timeout
+        attr_accessor :messaging_client_opts, :client, :sleep_poll, :poll_timeout
 
         def process_message(client, msg)
           logger.info("Processing #{msg.message} with msg: #{msg.payload}")
@@ -159,6 +158,10 @@ module TopologicalInventory
           end
 
           service_instance
+        end
+
+        def api_client
+          Thread.current[:topological_inventory_api_client] ||= TopologicalInventoryApiClient::DefaultApi.new
         end
 
         def queue_opts

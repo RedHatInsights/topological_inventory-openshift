@@ -74,7 +74,7 @@ module TopologicalInventory
           end
 
           def connection
-            @connection ||= connection_manager.connect(
+            Thread.current[:kubernetes_connection] ||= connection_manager.connect(
               "servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
             )
           end
