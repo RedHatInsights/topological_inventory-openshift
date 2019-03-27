@@ -62,7 +62,7 @@ module TopologicalInventory
             service_plan.name, service_offering.name, order_params
           )
           client.ack(msg.ack_ref)
-          poll_order_complete(task_id, source_id, service_instance, service_offering, service_plan)
+          poll_order_complete(task_id, source_id, service_instance)
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
         rescue StandardError => err
           logger.error("Exception while ordering #{err}")
@@ -75,7 +75,7 @@ module TopologicalInventory
           api_client.update_task(task_id, task)
         end
 
-        def poll_order_complete(task_id, source_id, service_instance, service_offering, service_plan)
+        def poll_order_complete(task_id, source_id, service_instance)
           catalog_client = Core::ServiceCatalogClient.new(source_id)
           catalog_client.wait_for_provision_complete(service_instance)
 
