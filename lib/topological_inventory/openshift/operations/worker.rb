@@ -57,9 +57,11 @@ module TopologicalInventory
 
           catalog_client = Core::ServiceCatalogClient.new(source_id)
 
+          logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
             service_plan.name, service_offering.name, order_params
           )
+          logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
 
           poll_order_complete_thread(task_id, source_id, service_instance)
         rescue StandardError => err
@@ -81,10 +83,12 @@ module TopologicalInventory
         end
 
         def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
+          logger.info("Waiting for service [#{service_instance_name}] to provision...")
           catalog_client = Core::ServiceCatalogClient.new(source_id)
           service_instance = catalog_client.wait_for_provision_complete(
             service_instance_name, service_instance_namespace
           )
+          logger.info("Waiting for service [#{service_instance_name}] to provision...Complete")
 
           context = svc_instance_context_with_url(source_id, service_instance)
           status  = provisioning_status(service_instance)
