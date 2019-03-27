@@ -23,7 +23,11 @@ module TopologicalInventory
           logger.info("Topological Inventory Openshift Operations worker started...")
 
           client.subscribe_messages(queue_opts.merge(:max_bytes => 500000)) do |messages|
-            messages.each { |msg| process_message(client, msg) }
+            Thread.new do
+              messages.each do |msg|
+                process_message(client, msg)
+              end
+            end
           end
         ensure
           client&.close
@@ -38,18 +42,18 @@ module TopologicalInventory
 
         attr_accessor :messaging_client_opts, :client, :api_client, :sleep_poll, :poll_timeout
 
-        def process_message(client, msg)
+        def process_message(_client, msg)
           logger.info("Processing #{msg.message} with msg: #{msg.payload}")
           # TODO: Move to separate module later when more message types are expected aside from just ordering
-          order_service(client, msg)
+          order_service(msg.payload)
         rescue StandardError => e
           logger.error(e.message)
           logger.error(e.backtrace.join("\n"))
           nil
         end
 
-        def order_service(client, msg)
-          task_id, service_plan_id, order_params = msg.payload.values_at("task_id", "service_plan_id", "order_params")
+        def order_service(payload)
+          task_id, service_plan_id, order_params = payload.values_at("task_id", "service_plan_id", "order_params")
 
           service_plan     = api_client.show_service_plan(service_plan_id)
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
@@ -60,12 +64,10 @@ module TopologicalInventory
           service_instance = catalog_client.order_service_plan(
             service_plan.name, service_offering.name, order_params
           )
-          client.ack(msg.ack_ref)
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
 
           context = svc_instance_context_with_url(service_offering, service_plan, service_instance )
           status  = provisioning_status(service_instance)
-
           update_task(task_id, :state => "completed", :status => status, :context => context)
         rescue StandardError => err
           logger.error("Exception while ordering #{err}")
