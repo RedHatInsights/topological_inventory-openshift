@@ -53,15 +53,16 @@ module TopologicalInventory
 
           service_plan     = api_client.show_service_plan(service_plan_id)
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
+          source_id        = service_plan.source_id
 
-          catalog_client = Core::ServiceCatalogClient.new(service_plan.source_id)
+          catalog_client = Core::ServiceCatalogClient.new(source_id)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
             service_plan.name, service_offering.name, order_params
           )
           client.ack(msg.ack_ref)
-          poll_order_complete(task_id, catalog_client, service_instance, service_offering, service_plan)
+          poll_order_complete(task_id, source_id, service_instance, service_offering, service_plan)
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
         rescue StandardError => err
           logger.error("Exception while ordering #{err}")
@@ -74,34 +75,34 @@ module TopologicalInventory
           api_client.update_task(task_id, task)
         end
 
-        def poll_order_complete(task_id, catalog_client, service_instance, service_offering, service_plan)
+        def poll_order_complete(task_id, source_id, service_instance, service_offering, service_plan)
+          catalog_client = Core::ServiceCatalogClient.new(source_id)
           catalog_client.wait_for_provision_complete(service_instance)
 
-          context = svc_instance_context_with_url(service_offering, service_plan, service_instance)
+          context = svc_instance_context_with_url(source_id, service_instance)
           status  = provisioning_status(service_instance)
 
           update_task(task_id, :state => "completed", :status => status, :context => context)
         end
 
-        def svc_instance_context_with_url(service_offering, service_plan, service_instance)
+        def svc_instance_context_with_url(source_id, service_instance)
           context = {
             :service_instance => {
-              :source_id  => service_plan.source_id,
+              :source_id  => source_id,
               :source_ref => service_instance.spec&.externalID
             }
           }
 
           if provisioning_status(service_instance) == "ok"
-            url = svc_instance_url(service_offering, service_instance)
+            url = svc_instance_url(source_id, service_instance)
             context[:service_instance][:url] = url if url.present?
           end
 
           context
         end
 
-        def svc_instance_url(service_offering, service_instance)
-          svc_instance = svc_instance_by_source_ref(service_offering.source_id,
-                                                    service_instance.spec&.externalID)
+        def svc_instance_url(source_id, service_instance)
+          svc_instance = svc_instance_by_source_ref(source_id, service_instance.spec&.externalID)
           return if svc_instance.nil?
 
           rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance&.id.to_s)
