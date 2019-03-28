@@ -33,6 +33,8 @@ module TopologicalInventory
           end
 
           def wait_for_provision_complete(name, namespace)
+            service_instance = nil
+
             loop do
               sleep(sleep_poll)
 
