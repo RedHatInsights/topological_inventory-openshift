@@ -28,17 +28,21 @@ module TopologicalInventory
           end
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)
-            connection = connection_manager.connect(
-              "servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
-            )
-
             payload = build_payload(plan_name, service_offering_name, additional_parameters)
+            connection.create_service_instance(payload)
+          end
 
-            service_instance = connection.create_service_instance(payload)
+          def wait_for_provision_complete(name, namespace)
+            loop do
+              sleep(sleep_poll)
 
-            logger.info("Waiting for #{service_instance.metadata.name} to provision...")
-            service_instance = wait_for_provision_complete(connection, service_instance)
-            logger.info("Waiting for #{service_instance.metadata.name} to provision...Complete")
+              service_instance = connection.get_service_instance(name, namespace)
+
+              condition = service_instance.status.conditions.first
+              logger.info("#{service_instance.metadata.name}: message [#{condition&.message}] status [#{condition&.status}] reason [#{condition&.reason}]")
+
+              break unless service_instance_provisioning?(service_instance)
+            end
 
             service_instance
           end
@@ -64,27 +68,15 @@ module TopologicalInventory
             }
           end
 
-          def wait_for_provision_complete(connection, service_instance)
-            loop do
-              sleep(sleep_poll)
-
-              service_instance = connection.get_service_instance(
-                service_instance.metadata.name,
-                service_instance.metadata.namespace
-              )
-
-              condition = service_instance.status.conditions.first
-              logger.info("#{service_instance.metadata.name}: message [#{condition&.message}] status [#{condition&.status}] reason [#{condition&.reason}]")
-
-              break unless service_instance_provisioning?(service_instance)
-            end
-
-            service_instance
-          end
-
           def service_instance_provisioning?(service_instance)
             reason = service_instance.status.conditions.first&.reason
             %w[Provisioning ProvisionRequestInFlight].include?(reason)
+          end
+
+          def connection
+            Thread.current[:kubernetes_connection] ||= connection_manager.connect(
+              "servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
+            )
           end
 
           def verify_ssl_mode

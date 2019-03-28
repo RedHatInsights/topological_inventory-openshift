@@ -3,8 +3,7 @@ require "topological_inventory/openshift/operations/worker"
 RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
   let(:client) { double(:client) }
 
-  describe "#run" do
-    let(:messages) { [ManageIQ::Messaging::ReceivedMessage.new(nil, "ServicePlan.order", payload, SecureRandom.uuid)] }
+  describe "#order_service (private)" do
     let(:task) { double("Task", :id => 1) }
 
     let(:service_plan) do
@@ -34,15 +33,26 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     let(:service_instances_url) { URI.join(base_url_path, "service_instances?source_id=#{source.id}&source_ref=#{service_instance.source_ref}") }
     let(:task_url) { URI.join(base_url_path, "tasks/#{task.id}").to_s }
     let(:headers) { {"Content-Type" => "application/json"} }
+    let(:service_instance) do
+      Kubeclient::Resource.new(
+        :metadata => {
+          :name      => "my_service",
+          :namespace => "default",
+          :uid       => "af01c63c-e479-4190-8054-9c5ba2e9ec81"
+        },
+        :status   => {
+          :conditions => [
+            Kubeclient::Resource.new(
+              :reason => "ProvisionedSuccessfully"
+            )
+          ]
+        }
+      )
+    end
 
     before do
       require "active_support/json"
       require "active_support/core_ext/object/json" # required to get service_plan.to_json to work properly
-
-      allow(ManageIQ::Messaging::Client).to receive(:open).and_return(client)
-      allow(client).to receive(:close)
-      allow(client).to receive(:subscribe_messages).and_yield(messages)
-      allow(client).to receive(:ack)
 
       stub_request(:get, service_plan_url).with(:headers => headers).to_return(
         :headers => headers, :body => service_plan.to_json
@@ -61,28 +71,17 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
       ).to receive(:new).with(source.id).and_return(service_catalog_client)
 
-      allow(service_catalog_client).to receive(:order_service_plan)
-        .and_return(
-          Kubeclient::Resource.new(
-            :spec   => {
-              :externalID => service_instance.source_ref
-            },
-            :status => {
-              :conditions => [
-                Kubeclient::Resource.new(
-                  :reason => "ProvisionedSuccessfully"
-                )
-              ]
-            }
-          )
-        )
+      allow(service_catalog_client).to receive(:order_service_plan).and_return(service_instance)
+      allow(service_catalog_client).to receive(:wait_for_provision_complete).and_return(service_instance)
 
       stub_request(:patch, task_url).with(:headers => headers)
     end
 
     it "orders the service via the service catalog client" do
       expect(service_catalog_client).to receive(:order_service_plan).with("plan_name", "service_offering", "order_params")
-      described_class.new.run
+      expect(service_catalog_client).to receive(:wait_for_provision_complete).with(service_instance.metadata.name, service_instance.metadata.namespace)
+      thread = described_class.new.send(:order_service, payload)
+      thread.join
     end
 
     it "makes a patch request to the update task endpoint with the status and context" do
@@ -94,7 +93,9 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
         }
       }.to_json
 
-      described_class.new.run
+      thread = described_class.new.send(:order_service, payload)
+      thread.join
+
       expect(
         a_request(:patch, task_url).with(:body => {"status" => "ok", "state" => "completed", "context" => expected_context})
       ).to have_been_made

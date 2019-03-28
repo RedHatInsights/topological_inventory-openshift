@@ -10,7 +10,6 @@ module TopologicalInventory
         include Logging
 
         def initialize(messaging_client_opts = {})
-          self.api_client            = TopologicalInventoryApiClient::DefaultApi.new
           self.messaging_client_opts = default_messaging_opts.merge(messaging_client_opts)
           self.sleep_poll            = 10   # seconds
           self.poll_timeout          = 1800 # seconds
@@ -22,7 +21,7 @@ module TopologicalInventory
 
           logger.info("Topological Inventory Openshift Operations worker started...")
 
-          client.subscribe_messages(queue_opts.merge(:max_bytes => 500000)) do |messages|
+          client.subscribe_messages(queue_opts) do |messages|
             messages.each { |msg| process_message(client, msg) }
           end
         ensure
@@ -36,37 +35,35 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :messaging_client_opts, :client, :api_client, :sleep_poll, :poll_timeout
+        attr_accessor :messaging_client_opts, :client, :sleep_poll, :poll_timeout
 
         def process_message(client, msg)
           logger.info("Processing #{msg.message} with msg: #{msg.payload}")
           # TODO: Move to separate module later when more message types are expected aside from just ordering
-          order_service(client, msg)
+          order_service(msg.payload)
+          client.ack(msg.ack_ref)
         rescue StandardError => e
           logger.error(e.message)
           logger.error(e.backtrace.join("\n"))
           nil
         end
 
-        def order_service(client, msg)
-          task_id, service_plan_id, order_params = msg.payload.values_at("task_id", "service_plan_id", "order_params")
+        def order_service(payload)
+          task_id, service_plan_id, order_params = payload.values_at("task_id", "service_plan_id", "order_params")
 
           service_plan     = api_client.show_service_plan(service_plan_id)
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
+          source_id        = service_plan.source_id
 
-          catalog_client = Core::ServiceCatalogClient.new(service_plan.source_id)
+          catalog_client = Core::ServiceCatalogClient.new(source_id)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
             service_plan.name, service_offering.name, order_params
           )
-          client.ack(msg.ack_ref)
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
 
-          context = svc_instance_context_with_url(service_offering, service_plan, service_instance )
-          status  = provisioning_status(service_instance)
-
-          update_task(task_id, :state => "completed", :status => status, :context => context)
+          poll_order_complete_thread(task_id, source_id, service_instance)
         rescue StandardError => err
           logger.error("Exception while ordering #{err}")
           logger.error(err.backtrace.join("\n"))
@@ -78,25 +75,49 @@ module TopologicalInventory
           api_client.update_task(task_id, task)
         end
 
-        def svc_instance_context_with_url(service_offering, service_plan, service_instance)
+        def poll_order_complete_thread(task_id, source_id, service_instance)
+          service_instance_name      = service_instance.metadata.name
+          service_instance_namespace = service_instance.metadata.namespace
+
+          Thread.new { poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace) }
+        end
+
+        def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
+          logger.info("Waiting for service [#{service_instance_name}] to provision...")
+          catalog_client = Core::ServiceCatalogClient.new(source_id)
+          service_instance = catalog_client.wait_for_provision_complete(
+            service_instance_name, service_instance_namespace
+          )
+          logger.info("Waiting for service [#{service_instance_name}] to provision...Complete")
+
+          context = svc_instance_context_with_url(source_id, service_instance)
+          status  = provisioning_status(service_instance)
+
+          update_task(task_id, :state => "completed", :status => status, :context => context)
+        rescue StandardError => err
+          logger.error("Exception while ordering #{err}")
+          logger.error(err.backtrace.join("\n"))
+          update_task(task_id, :state => "completed", :status => "error", :context => {:error => err.to_s})
+        end
+
+        def svc_instance_context_with_url(source_id, service_instance)
           context = {
             :service_instance => {
-              :source_id  => service_plan.source_id,
+              :source_id  => source_id,
               :source_ref => service_instance.spec&.externalID
             }
           }
 
           if provisioning_status(service_instance) == "ok"
-            url = svc_instance_url(service_offering, service_instance)
+            url = svc_instance_url(source_id, service_instance)
             context[:service_instance][:url] = url if url.present?
           end
 
           context
         end
 
-        def svc_instance_url(service_offering, service_instance)
-          svc_instance = svc_instance_by_source_ref(service_offering.source_id,
-                                                    service_instance.spec&.externalID)
+        def svc_instance_url(source_id, service_instance)
+          svc_instance = svc_instance_by_source_ref(source_id, service_instance.spec&.externalID)
           return if svc_instance.nil?
 
           rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance&.id.to_s)
@@ -143,9 +164,15 @@ module TopologicalInventory
           service_instance
         end
 
+        def api_client
+          Thread.current[:topological_inventory_api_client] ||= TopologicalInventoryApiClient::DefaultApi.new
+        end
+
         def queue_opts
           {
-            :service => "platform.topological-inventory.operations-openshift"
+            :auto_ack  => false,
+            :max_bytes => 50_000,
+            :service   => "platform.topological-inventory.operations-openshift"
           }
         end
 
