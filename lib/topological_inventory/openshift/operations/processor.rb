@@ -143,7 +143,12 @@ module TopologicalInventory
         end
 
         def api_client
-          Thread.current[:api_client] ||= TopologicalInventoryApiClient::DefaultApi.new
+          @api_client ||=
+            begin
+              api_client = TopologicalInventoryApiClient::ApiClient.new
+              api_client.default_headers.merge!(payload["identity"]) if payload["identity"].present?
+              TopologicalInventoryApiClient::DefaultApi.new(api_client)
+            end
         end
       end
     end

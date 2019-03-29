@@ -23,7 +23,14 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
       TopologicalInventoryApiClient::ServiceInstance.new(:id => "789", :name => "service_instance", :source_ref => "af01c63c-e479-4190-8054-9c5ba2e9ec81")
     end
 
-    let(:payload) { {"service_plan_id" => service_plan.id.to_s, "order_params" => "order_params", "task_id" => task.id.to_s} }
+    let(:payload) do
+      {
+        "service_plan_id" => service_plan.id.to_s,
+        "order_params"    => "order_params",
+        "task_id"         => task.id.to_s,
+        "identity"        => {"x-rh-identity"=>"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjI0MCJ9fQ==\n"},
+      }
+    end
 
     let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
     let(:base_url_path) { "https://virtserver.swaggerhub.com/api/topological-inventory/v0.1/" }
@@ -32,7 +39,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
     let(:service_offering_url) { URI.join(base_url_path, "service_offerings/#{service_offering.id}").to_s }
     let(:service_instances_url) { URI.join(base_url_path, "service_instances?source_id=#{source.id}&source_ref=#{service_instance.source_ref}") }
     let(:task_url) { URI.join(base_url_path, "tasks/#{task.id}").to_s }
-    let(:headers) { {"Content-Type" => "application/json"} }
+    let(:headers) { {"Content-Type" => "application/json", "x-rh-identity"=>"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjI0MCJ9fQ==\n"} }
     let(:service_instance) do
       Kubeclient::Resource.new(
         :metadata => {
