@@ -100,6 +100,7 @@ module TopologicalInventory::Openshift
       logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
       total_parts = 0
+      sweep_scope = Set.new
       loop do
         entities = connection.send("get_#{entity_type}", :limit => limits[entity_type], :continue => continue)
         break if entities.nil?
@@ -113,18 +114,17 @@ module TopologicalInventory::Openshift
         refresh_state_part_uuid = SecureRandom.uuid
         total_parts += 1
         save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+        sweep_scope.merge(collections.map(&:name))
 
         break if entities.last?
       end
 
       logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete - Parts [#{total_parts}]")
 
-      logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
+      sweep_scope = sweep_scope.to_a
+      logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
-      parser = Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
-      collection = parser.send("parse_#{entity_type}", [])
-
-      sweep_inventory(refresh_state_uuid, total_parts, [collection.name])
+      sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
 
       logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
