@@ -114,7 +114,7 @@ module TopologicalInventory::Openshift
         refresh_state_part_uuid = SecureRandom.uuid
         total_parts += 1
         save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
-        sweep_scope.merge(collections.map(&:name))
+        sweep_scope.merge(parser.collections.values.map(&:name))
 
         break if entities.last?
       end
@@ -141,7 +141,38 @@ module TopologicalInventory::Openshift
         parser.send(parse_method, notice)
       end
 
-      save_inventory(parser.collections.values)
+      refresh_state_uuid      = SecureRandom.uuid
+      refresh_state_part_uuid = SecureRandom.uuid
+      save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+
+      sweep_inventory(refresh_state_uuid, 1, parse_targeted_sweep_scope(parser.collections.values))
+    end
+
+    def parse_targeted_sweep_scope(collections)
+      sweep_scope = {}
+      collections.each do |collection|
+        if (parent_keys = targeted_sweep_scopes[collection.name])
+          # Calling to_set.to_a filters it to only unique lazy_finds
+          sweep_scope[collection.name] = collection.data.map { |x| x.to_hash.slice(*parent_keys) }.to_set.to_a
+        end
+      end
+
+      sweep_scope
+    end
+
+    def targeted_sweep_scopes
+      @targeted_sweep_scopes ||= {
+        :container_image_tags    => [:container_image],
+        :containers              => [:container_group],
+        :container_group_tags    => [:container_group],
+        :container_project_tags  => [:container_project],
+        :container_node_tags     => [:container_node],
+        :container_template_tags => [:container_template],
+        :service_offering_tags   => [:container_offering],
+        :service_offering_icons  => [:container_offering],
+        :vm_tags                 => [:vm],
+        :volume_attachments      => [:volume],
+      }
     end
 
     def save_inventory(collections, refresh_state_uuid = nil, refresh_state_part_uuid = nil)
