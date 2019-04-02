@@ -100,6 +100,7 @@ module TopologicalInventory::Openshift
       logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
       total_parts = 0
+      sweep_scope = Set.new
       loop do
         entities = connection.send("get_#{entity_type}", :limit => limits[entity_type], :continue => continue)
         break if entities.nil?
@@ -113,18 +114,17 @@ module TopologicalInventory::Openshift
         refresh_state_part_uuid = SecureRandom.uuid
         total_parts += 1
         save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+        sweep_scope.merge(parser.collections.values.map(&:name))
 
         break if entities.last?
       end
 
       logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete - Parts [#{total_parts}]")
 
-      logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
+      sweep_scope = sweep_scope.to_a
+      logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
-      parser = Parser.new(:openshift_host => openshift_host, :openshift_port => openshift_port)
-      collection = parser.send("parse_#{entity_type}", [])
-
-      sweep_inventory(refresh_state_uuid, total_parts, [collection.name])
+      sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
 
       logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
@@ -141,7 +141,40 @@ module TopologicalInventory::Openshift
         parser.send(parse_method, notice)
       end
 
-      save_inventory(parser.collections.values)
+      refresh_state_uuid      = SecureRandom.uuid
+      refresh_state_part_uuid = SecureRandom.uuid
+      save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+
+      sweep_inventory(refresh_state_uuid, 1, parse_targeted_sweep_scope(parser.collections.values))
+    end
+
+    def parse_targeted_sweep_scope(collections)
+      sweep_scope = {}
+      collections.each do |collection|
+        if (parent_keys = targeted_sweep_scopes[collection.name])
+          # Calling to_set.to_a filters it to only unique lazy_finds
+          sweep_scope[collection.name] = collection.data.map { |x| x.to_hash.slice(*parent_keys) }.to_set.to_a
+        end
+      end
+
+      sweep_scope
+    end
+
+    def targeted_sweep_scopes
+      # Set attribute names that are determining the scope of the subcollections
+      # e.g. for containers it's container_group attribute, which is a lazy find to container group. So we collect all
+      # container_groups of the saved containers and we take them as a scope. That means containers of those
+      # container groups that no longer exist, will be sweeped.
+      @targeted_sweep_scopes ||= {
+        :container_image_tags    => [:container_image],
+        :containers              => [:container_group],
+        :container_group_tags    => [:container_group],
+        :container_project_tags  => [:container_project],
+        :container_node_tags     => [:container_node],
+        :container_template_tags => [:container_template],
+        :service_offering_tags   => [:container_offering],
+        :service_offering_icons  => [:container_offering],
+      }
     end
 
     def save_inventory(collections, refresh_state_uuid = nil, refresh_state_part_uuid = nil)
