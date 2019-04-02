@@ -161,6 +161,10 @@ module TopologicalInventory::Openshift
     end
 
     def targeted_sweep_scopes
+      # Set attribute names that are determining the scope of the subcollections
+      # e.g. for containers it's container_group attribute, which is a lazy find to container group. So we collect all
+      # container_groups of the saved containers and we take them as a scope. That means containers of those
+      # container groups that no longer exist, will be sweeped.
       @targeted_sweep_scopes ||= {
         :container_image_tags    => [:container_image],
         :containers              => [:container_group],
@@ -170,8 +174,6 @@ module TopologicalInventory::Openshift
         :container_template_tags => [:container_template],
         :service_offering_tags   => [:container_offering],
         :service_offering_icons  => [:container_offering],
-        :vm_tags                 => [:vm],
-        :volume_attachments      => [:volume],
       }
     end
 
