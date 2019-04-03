@@ -1,7 +1,6 @@
 require "manageiq-messaging"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/processor"
-require "topological_inventory/openshift/operations/core/service_catalog_client"
 require "topological_inventory-api-client"
 
 module TopologicalInventory
@@ -22,11 +21,7 @@ module TopologicalInventory
 
           client.subscribe_messages(queue_opts) do |messages|
             messages.each do |message|
-              model, method = message.message.split(".")
-
-              processor = Processor.new(model, method, message.payload)
-              processor.process
-
+              process_message(message)
               client.ack(message.ack_ref)
             end
           end
@@ -37,6 +32,16 @@ module TopologicalInventory
         private
 
         attr_accessor :messaging_client_opts
+
+        def process_message(message)
+          model, method = message.message.split(".")
+
+          processor = Processor.new(model, method, message.payload)
+          processor.process
+        rescue => err
+          logger.error(err)
+          logger.error(err.backtrace.join("\n"))
+        end
 
         def queue_opts
           {
