@@ -11,20 +11,30 @@ module TopologicalInventory
         class ServiceCatalogClient
           include Logging
 
-          attr_accessor :default_endpoint, :authentication, :connection_manager, :sleep_poll
+          attr_accessor :default_endpoint, :authentication, :connection_manager, :sleep_poll, :identity
 
-          def initialize(source_id)
+          def initialize(source_id, identity = nil)
             self.sleep_poll = 10
-
-            api_client = TopologicalInventoryApiClient::DefaultApi.new
+            self.identity = identity
 
             all_source_endpoints = api_client.list_source_endpoints(source_id)
             self.default_endpoint = all_source_endpoints.data.find(&:default)
 
             authentication_id = api_client.list_endpoint_authentications(default_endpoint.id.to_s).data.first&.id
-            self.authentication = AuthenticationRetriever.new(authentication_id).process
+            self.authentication = AuthenticationRetriever.new(authentication_id, identity).process
 
             self.connection_manager = TopologicalInventory::Openshift::Connection.new
+          end
+
+          def api_client
+            @api_client ||=
+              begin
+                TopologicalInventoryApiClient::DefaultApi.new(
+                  TopologicalInventoryApiClient::ApiClient.new.tap do |api|
+                    api.default_headers.merge!(identity) if identity.present?
+                  end
+                )
+              end
           end
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)
