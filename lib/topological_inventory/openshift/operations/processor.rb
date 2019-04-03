@@ -30,7 +30,7 @@ module TopologicalInventory
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
           source_id        = service_plan.source_id
 
-          catalog_client = Core::ServiceCatalogClient.new(source_id)
+          catalog_client = Core::ServiceCatalogClient.new(source_id, payload["identity"])
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
@@ -59,7 +59,7 @@ module TopologicalInventory
 
         def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
           logger.info("Waiting for service [#{service_instance_name}] to provision...")
-          catalog_client = Core::ServiceCatalogClient.new(source_id)
+          catalog_client = Core::ServiceCatalogClient.new(source_id, payload["identity"])
           service_instance = catalog_client.wait_for_provision_complete(
             service_instance_name, service_instance_namespace
           )

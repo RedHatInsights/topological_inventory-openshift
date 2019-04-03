@@ -23,12 +23,14 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
       TopologicalInventoryApiClient::ServiceInstance.new(:id => "789", :name => "service_instance", :source_ref => "af01c63c-e479-4190-8054-9c5ba2e9ec81")
     end
 
+    let(:identity) { {"x-rh-identity"=>"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjI0MCJ9fQ==\n"} }
+
     let(:payload) do
       {
         "service_plan_id" => service_plan.id.to_s,
         "order_params"    => "order_params",
         "task_id"         => task.id.to_s,
-        "identity"        => {"x-rh-identity"=>"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjI0MCJ9fQ==\n"},
+        "identity"        => identity,
       }
     end
 
@@ -76,7 +78,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
 
       allow(
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
-      ).to receive(:new).with(source.id).and_return(service_catalog_client)
+      ).to receive(:new).with(source.id, identity).and_return(service_catalog_client)
 
       allow(service_catalog_client).to receive(:order_service_plan).and_return(service_instance)
       allow(service_catalog_client).to receive(:wait_for_provision_complete).and_return(service_instance)

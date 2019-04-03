@@ -3,14 +3,17 @@ module TopologicalInventory
     module Operations
       module Core
         class AuthenticationRetriever
-          def initialize(id)
-            @id = id.to_s
+          def initialize(id, identity = nil)
+            @id       = id.to_s
+            @identity = identity
           end
 
           def process
             headers = {
               "Content-Type" => "application/json"
             }
+
+            headers.merge!(@identity) if @identity.present?
 
             scheme     = TopologicalInventoryApiClient.configure.scheme
             host, port = TopologicalInventoryApiClient.configure.host.split(":")
