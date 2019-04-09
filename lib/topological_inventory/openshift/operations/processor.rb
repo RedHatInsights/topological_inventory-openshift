@@ -86,6 +86,7 @@ module TopologicalInventory
           if provisioning_status(service_instance) == "ok"
             url = svc_instance_url(source_id, service_instance)
             context[:service_instance][:url] = url if url.present?
+            context[:service_instance][:id] = service_instance.id
           end
 
           context
