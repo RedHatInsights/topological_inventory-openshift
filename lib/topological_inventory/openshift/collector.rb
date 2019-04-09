@@ -4,12 +4,14 @@ require "topological_inventory/openshift"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
+require "topological_inventory-ingress_api-client"
+require "topological_inventory-ingress_api-client/save_inventory/saver"
 
 module TopologicalInventory::Openshift
   class Collector
     include Logging
 
-    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 50, poll_time: 30)
+    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 500, poll_time: 30)
       self.connection_manager = Connection.new
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
@@ -121,8 +123,7 @@ module TopologicalInventory::Openshift
         parser.send("parse_#{entity_type}", entities)
 
         refresh_state_part_uuid = SecureRandom.uuid
-        total_parts += 1
-        save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+        total_parts += save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
         sweep_scope.merge(parser.collections.values.map(&:name))
 
         break if entities.last?
@@ -135,7 +136,7 @@ module TopologicalInventory::Openshift
 
       sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
 
-      logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
+      logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
     end
 
@@ -152,9 +153,9 @@ module TopologicalInventory::Openshift
 
       refresh_state_uuid      = SecureRandom.uuid
       refresh_state_part_uuid = SecureRandom.uuid
-      save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+      total_parts = save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
 
-      sweep_inventory(refresh_state_uuid, 1, parse_targeted_sweep_scope(parser.collections.values))
+      sweep_inventory(refresh_state_uuid, total_parts, parse_targeted_sweep_scope(parser.collections.values))
     end
 
     def parse_targeted_sweep_scope(collections)
@@ -189,7 +190,7 @@ module TopologicalInventory::Openshift
     def save_inventory(collections, refresh_state_uuid = nil, refresh_state_part_uuid = nil)
       return if collections.empty?
 
-      ingress_api_client.save_inventory(
+      TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(:client => ingress_api_client, :logger => logger).save(
         :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
           :name                    => "OCP",
           :schema                  => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
@@ -202,7 +203,7 @@ module TopologicalInventory::Openshift
     end
 
     def sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
-      ingress_api_client.save_inventory(
+      TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(:client => ingress_api_client, :logger => logger).save(
         :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
           :name               => "OCP",
           :schema             => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
