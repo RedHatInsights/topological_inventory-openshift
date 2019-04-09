@@ -4,6 +4,8 @@ require "topological_inventory/openshift"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
+require "topological_inventory-ingress_api-client"
+require "topological_inventory-ingress_api-client/save_inventory/saver"
 
 module TopologicalInventory::Openshift
   class Collector
@@ -126,7 +128,7 @@ module TopologicalInventory::Openshift
 
       sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
 
-      logger.info("Sweeping inactive records for #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
+      logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
     end
 
@@ -180,7 +182,7 @@ module TopologicalInventory::Openshift
     def save_inventory(collections, refresh_state_uuid = nil, refresh_state_part_uuid = nil)
       return if collections.empty?
 
-      ingress_api_client.save_inventory(
+      TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(ingress_api_client, logger).save(
         :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
           :name                    => "OCP",
           :schema                  => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
@@ -193,7 +195,7 @@ module TopologicalInventory::Openshift
     end
 
     def sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
-      ingress_api_client.save_inventory(
+      TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(ingress_api_client, logger).save(
         :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
           :name               => "OCP",
           :schema             => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
