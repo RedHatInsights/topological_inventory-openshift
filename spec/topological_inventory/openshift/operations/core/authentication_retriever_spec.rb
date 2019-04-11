@@ -9,7 +9,7 @@ module TopologicalInventory
 
           let(:headers) { {"Content-Type" => "application/json"} }
           let(:internal_authentications_url) do
-            "https://virtserver.swaggerhub.com/internal/v0.0/authentications/123?expose_encrypted_attribute[]=password"
+            "https://cloud.redhat.com/internal/v0.0/authentications/123?expose_encrypted_attribute[]=password"
           end
           let(:internal_authentication_response) { {"password" => "token"} }
 
@@ -22,7 +22,7 @@ module TopologicalInventory
           describe "#process" do
             it "returns the relevant authentication" do
               authentication = subject.process
-              expect(authentication.class).to eq(TopologicalInventoryApiClient::Authentication)
+              expect(authentication.class).to eq(SourcesApiClient::Authentication)
               expect(authentication.password).to eq("token")
             end
           end

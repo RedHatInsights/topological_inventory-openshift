@@ -1,3 +1,5 @@
+require "sources-api-client"
+
 module TopologicalInventory
   module Openshift
     module Operations
@@ -15,8 +17,8 @@ module TopologicalInventory
 
             headers.merge!(@identity) if @identity.present?
 
-            scheme     = TopologicalInventoryApiClient.configure.scheme
-            host, port = TopologicalInventoryApiClient.configure.host.split(":")
+            scheme     = SourcesApiClient.configure.scheme
+            host, port = SourcesApiClient.configure.host.split(":")
 
             uri = URI::Generic.build(
               :scheme => scheme,
@@ -32,7 +34,7 @@ module TopologicalInventory
               :headers => headers
             }
             response = RestClient::Request.new(request_options).execute
-            TopologicalInventoryApiClient::Authentication.new(JSON.parse(response.body))
+            SourcesApiClient::Authentication.new(JSON.parse(response.body))
           end
         end
       end
