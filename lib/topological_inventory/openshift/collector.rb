@@ -25,15 +25,24 @@ module TopologicalInventory::Openshift
     def collect!
       start_collector_threads
 
+      errors = 0
       until finished?
         ensure_collector_threads
 
         notices = []
         notices << queue.pop until queue.empty?
 
-        targeted_refresh(notices) unless notices.empty?
+        begin
+          targeted_refresh(notices) unless notices.empty?
 
-        sleep(poll_time)
+          errors = 0
+          sleep(poll_time)
+        rescue => err
+          logger.error(err)
+
+          errors += 1 unless errors > 10
+          sleep(poll_time * errors)
+        end
       end
     end
 
