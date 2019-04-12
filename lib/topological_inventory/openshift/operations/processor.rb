@@ -8,29 +8,32 @@ module TopologicalInventory
         include Logging
 
         def initialize(model, method, payload)
-          self.model   = model
-          self.method  = method
-          self.payload = payload
+          self.model           = model
+          self.method          = method
+          self.params          = payload["params"]
+          self.request_context = payload["request_context"]
         end
 
         def process
-          logger.info("Processing #{model}##{method} [#{payload}]...")
-          order_service(payload)
-          logger.info("Processing #{model}##{method} [#{payload}]...Complete")
+          logger.info("Processing #{model}##{method} [#{params}]...")
+          result = order_service(params)
+          logger.info("Processing #{model}##{method} [#{params}]...Complete")
+
+          result
         end
 
         private
 
-        attr_accessor :model, :method, :payload
+        attr_accessor :model, :method, :params, :request_context
 
-        def order_service(payload)
-          task_id, service_plan_id, order_params = payload.values_at("task_id", "service_plan_id", "order_params")
+        def order_service(params)
+          task_id, service_plan_id, order_params = params.values_at("task_id", "service_plan_id", "order_params")
 
           service_plan     = api_client.show_service_plan(service_plan_id)
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
           source_id        = service_plan.source_id
 
-          catalog_client = Core::ServiceCatalogClient.new(source_id, payload["identity"])
+          catalog_client = Core::ServiceCatalogClient.new(source_id, request_context)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
@@ -59,7 +62,7 @@ module TopologicalInventory
 
         def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
           logger.info("Waiting for service [#{service_instance_name}] to provision...")
-          catalog_client = Core::ServiceCatalogClient.new(source_id, payload["identity"])
+          catalog_client = Core::ServiceCatalogClient.new(source_id, request_context)
           service_instance = catalog_client.wait_for_provision_complete(
             service_instance_name, service_instance_namespace
           )
@@ -147,7 +150,7 @@ module TopologicalInventory
           @api_client ||=
             begin
               api_client = TopologicalInventoryApiClient::ApiClient.new
-              api_client.default_headers.merge!(payload["identity"]) if payload["identity"].present?
+              api_client.default_headers.merge!(request_context) if request_context.present?
               TopologicalInventoryApiClient::DefaultApi.new(api_client)
             end
         end
