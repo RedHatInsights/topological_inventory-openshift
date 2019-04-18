@@ -17,24 +17,21 @@ module TopologicalInventory
             self.sleep_poll = 10
             self.identity = identity
 
-            all_source_endpoints = api_client.list_source_endpoints(source_id)
+            all_source_endpoints = sources_api_client.list_source_endpoints(source_id)
             self.default_endpoint = all_source_endpoints.data.find(&:default)
 
-            authentication_id = api_client.list_endpoint_authentications(default_endpoint.id.to_s).data.first&.id
+            authentication_id = sources_api_client.list_endpoint_authentications(default_endpoint.id.to_s).data.first&.id
             self.authentication = AuthenticationRetriever.new(authentication_id, identity).process
 
             self.connection_manager = TopologicalInventory::Openshift::Connection.new
           end
 
-          def api_client
-            @api_client ||=
-              begin
-                TopologicalInventoryApiClient::DefaultApi.new(
-                  TopologicalInventoryApiClient::ApiClient.new.tap do |api|
-                    api.default_headers.merge!(identity) if identity.present?
-                  end
-                )
-              end
+          def sources_api_client
+            @sources_api_client ||= begin
+              api_client = SourcesApiClient::ApiClient.new
+              api_client.default_headers.merge!(identity) if identity.present?
+              SourcesApiClient::DefaultApi.new(api_client)
+            end
           end
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)

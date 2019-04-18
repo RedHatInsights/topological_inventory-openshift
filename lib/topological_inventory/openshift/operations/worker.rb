@@ -1,4 +1,5 @@
 require "manageiq-messaging"
+require "sources-api-client"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/processor"
 require "topological_inventory-api-client"
