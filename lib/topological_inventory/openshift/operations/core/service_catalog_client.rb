@@ -11,17 +11,12 @@ module TopologicalInventory
         class ServiceCatalogClient
           include Logging
 
-          attr_accessor :default_endpoint, :authentication, :connection_manager, :sleep_poll, :identity
+          attr_accessor :connection_manager, :sleep_poll, :source_id, :identity
 
           def initialize(source_id, identity = nil)
             self.sleep_poll = 10
-            self.identity = identity
-
-            all_source_endpoints = sources_api_client.list_source_endpoints(source_id)
-            self.default_endpoint = all_source_endpoints.data.find(&:default)
-
-            authentication_id = sources_api_client.list_endpoint_authentications(default_endpoint.id.to_s).data.first&.id
-            self.authentication = AuthenticationRetriever.new(authentication_id, identity).process
+            self.identity   = identity
+            self.source_id  = source_id
 
             self.connection_manager = TopologicalInventory::Openshift::Connection.new
           end
@@ -56,6 +51,14 @@ module TopologicalInventory
             service_instance
           end
 
+          def authentication
+            @authentication ||= fetch_authentication
+          end
+
+          def default_endpoint
+            @default_endpoint ||= fetch_default_endpoint
+          end
+
           private
 
           def build_payload(service_plan_name, service_offering_name, order_parameters)
@@ -83,13 +86,32 @@ module TopologicalInventory
           end
 
           def connection
-            Thread.current[:kubernetes_connection] ||= connection_manager.connect(
-              "servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
-            )
+            Thread.current[:kubernetes_connection] ||= begin
+              raise "Unable to find a default endpoint for source [#{source_id}]" if default_endpoint.nil?
+              raise "Unable to find an authentication for source [#{source_id}]"  if authentication.nil?
+
+              connection_manager.connect("servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode)
+            end
           end
 
           def verify_ssl_mode
             default_endpoint.verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
+          end
+
+          def fetch_default_endpoint
+            endpoints = sources_api_client.list_source_endpoints(source_id)&.data || []
+            endpoints.find(&:default)
+          end
+
+          def fetch_authentication
+            endpoint = default_endpoint
+            return if endpoint.nil?
+
+            endpoint_authentications = sources_api_client.list_endpoint_authentications(endpoint.id.to_s).data || []
+            return if endpoint_authentications.empty?
+
+            auth_id = endpoint_authentications.first.id
+            AuthenticationRetriever.new(auth_id, identity).process
           end
         end
       end
