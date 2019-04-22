@@ -9,7 +9,7 @@ module TopologicalInventory
 
           let(:headers) { {"Content-Type" => "application/json"} }
           let(:internal_authentications_url) do
-            "https://cloud.redhat.com/internal/v0.0/authentications/123?expose_encrypted_attribute[]=password"
+            "https://cloud.redhat.com/internal/v1.0/authentications/123?expose_encrypted_attribute[]=password"
           end
           let(:internal_authentication_response) { {"password" => "token"} }
 
