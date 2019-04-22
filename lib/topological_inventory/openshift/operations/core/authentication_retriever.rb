@@ -24,7 +24,7 @@ module TopologicalInventory
               :scheme => scheme,
               :host   => host,
               :port   => port,
-              :path   => "/internal/v0.0/authentications/#{@id}",
+              :path   => "/internal/v1.0/authentications/#{@id}",
               :query  => "expose_encrypted_attribute[]=password"
             )
 
