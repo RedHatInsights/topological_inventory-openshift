@@ -87,18 +87,16 @@ module TopologicalInventory
           }
 
           if provisioning_status(service_instance) == "ok"
-            url = svc_instance_url(source_id, service_instance)
-            context[:service_instance][:url] = url if url.present?
-            context[:service_instance][:id] = service_instance.id
+            svc_instance = svc_instance_by_source_ref(source_id, service_instance.spec&.externalID)
+            return context if svc_instance.nil?
+            context[:service_instance][:id] = svc_instance.id
+            context[:service_instance][:url] = svc_instance_url(svc_instance)
           end
 
           context
         end
 
-        def svc_instance_url(source_id, service_instance)
-          svc_instance = svc_instance_by_source_ref(source_id, service_instance.spec&.externalID)
-          return if svc_instance.nil?
-
+        def svc_instance_url(svc_instance)
           rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance&.id.to_s)
           api_client.api_client.build_request(:GET, rest_api_path).url
         end
