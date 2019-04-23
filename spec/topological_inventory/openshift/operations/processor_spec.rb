@@ -57,7 +57,8 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
               :reason => "ProvisionedSuccessfully"
             )
           ]
-        }
+        },
+        :id       => 123
       )
     end
 
@@ -100,8 +101,8 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
         :service_instance => {
           :source_id  => source.id,
           :source_ref => service_instance.source_ref,
-          :url        => "#{base_url_path}service_instances/#{service_instance.id}",
-          :id         => service_instance.id
+          :id         => service_instance.id.to_s,
+          :url        => "#{base_url_path}service_instances/#{service_instance.id}"
         }
       }.to_json
 
