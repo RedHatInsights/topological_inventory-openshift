@@ -122,6 +122,39 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
 
       collector.send(:sweep_inventory, refresh_state_uuid, 1, [])
     end
+
+    it "with normal scope " do
+      expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
+
+      collector.send(:sweep_inventory, refresh_state_uuid, 1, [:container_groups])
+    end
+
+    it "with normal targeted scope " do
+      expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
+
+      collector.send(:sweep_inventory, refresh_state_uuid, 1, {:container_groups => [{:source_ref => "a"}]})
+    end
+
+    it "fails with scope entity too large " do
+      expect(client).to receive(:save_inventory_with_http_info).exactly(0).times
+
+      sweep_scope = {:container_groups => [{:source_ref => "a" * 1_000_002 * multiplier}]}
+
+      expect { collector.send(:sweep_inventory, refresh_state_uuid, 1, sweep_scope) }.to(
+        raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
+      )
+    end
+
+    it "fails when scope is too big " do
+      # We should have also sweep scope chunking, that is if we'll do big targeted refresh and sweeping
+      expect(client).to receive(:save_inventory_with_http_info).exactly(0).times
+
+      sweep_scope = {:container_groups => (0..1001 * multiplier).map { {:source_ref => "a" * 1_000} } }
+
+      expect { collector.send(:sweep_inventory, refresh_state_uuid, 1, sweep_scope) }.to(
+        raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
+      )
+    end
   end
 
   def build_inventory(collections)
