@@ -31,16 +31,19 @@ module TopologicalInventory
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)
             payload = build_payload(plan_name, service_offering_name, additional_parameters)
-            connection.create_service_instance(payload)
+            servicecatalog_connection.create_service_instance(payload)
           end
 
           def wait_for_provision_complete(name, namespace)
-            service_instance = nil
+            service_instance = servicecatalog_connection.get_service_instance(name, namespace)
 
-            loop do
-              sleep(sleep_poll)
+            field_selector = "involvedObject.kind=#{service_instance.kind},"\
+                             "involvedObject.name=#{service_instance.metadata.name},"\
+                             "involvedObject.uid=#{service_instance.metadata.uid}"
 
-              service_instance = connection.get_service_instance(name, namespace)
+            watch = kubernetes_connection.watch_events(:namespace => namespace, :field_selector => field_selector)
+            watch.each do |notice|
+              service_instance = notice.object.involvedObject
 
               condition = service_instance.status.conditions.first
               logger.info("#{service_instance.metadata.name}: message [#{condition&.message}] status [#{condition&.status}] reason [#{condition&.reason}]")
@@ -85,12 +88,22 @@ module TopologicalInventory
             %w[Provisioning ProvisionRequestInFlight].include?(reason)
           end
 
-          def connection
-            Thread.current[:kubernetes_connection] ||= begin
-              raise "Unable to find a default endpoint for source [#{source_id}]" if default_endpoint.nil?
-              raise "Unable to find an authentication for source [#{source_id}]"  if authentication.nil?
+          def kubernetes_connection
+            raw_connect("kubernetes")
+          end
 
-              connection_manager.connect("servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode)
+          def servicecatalog_connection
+            raw_connect("servicecatalog")
+          end
+
+          def raw_connect(service)
+            raise "Unable to find a default endpoint for source [#{source_id}]" if default_endpoint.nil?
+            raise "Unable to find an authentication for source [#{source_id}]"  if authentication.nil?
+
+            Thread.current["#{service}_connection"] ||= begin
+              connection_manager.connect(
+                service, :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
+              )
             end
           end
 
