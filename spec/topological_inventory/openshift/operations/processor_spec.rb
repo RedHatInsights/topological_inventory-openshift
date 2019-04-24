@@ -83,7 +83,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
 
       allow(
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
-      ).to receive(:new).with(source.id, identity).and_return(service_catalog_client)
+      ).to receive(:new).with(source.id, task.id.to_s, identity).and_return(service_catalog_client)
 
       allow(service_catalog_client).to receive(:order_service_plan).and_return(service_instance)
       allow(service_catalog_client).to receive(:wait_for_provision_complete).and_return([service_instance, reason, message])

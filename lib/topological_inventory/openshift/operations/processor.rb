@@ -1,11 +1,13 @@
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/core/service_catalog_client"
+require "topological_inventory/openshift/operations/core/task_update"
 
 module TopologicalInventory
   module Openshift
     module Operations
       class Processor
         include Logging
+        include Core::TaskUpdate
 
         def initialize(model, method, payload)
           self.model           = model
@@ -33,7 +35,7 @@ module TopologicalInventory
           service_offering = api_client.show_service_offering(service_plan.service_offering_id)
           source_id        = service_plan.source_id
 
-          catalog_client = Core::ServiceCatalogClient.new(source_id, request_context)
+          catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, request_context)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
@@ -48,11 +50,6 @@ module TopologicalInventory
           update_task(task_id, :state => "completed", :status => "error", :context => {:error => err.to_s})
         end
 
-        def update_task(task_id, state:, status:, context:)
-          task = TopologicalInventoryApiClient::Task.new("state" => state, "status" => status, "context" => context.to_json)
-          api_client.update_task(task_id, task)
-        end
-
         def poll_order_complete_thread(task_id, source_id, service_instance)
           service_instance_name      = service_instance.metadata.name
           service_instance_namespace = service_instance.metadata.namespace
@@ -62,7 +59,7 @@ module TopologicalInventory
 
         def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
           logger.info("Waiting for service [#{service_instance_name}] to provision...")
-          catalog_client = Core::ServiceCatalogClient.new(source_id, request_context)
+          catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, request_context)
           service_instance, reason, message = catalog_client.wait_for_provision_complete(
             service_instance_name, service_instance_namespace
           )
