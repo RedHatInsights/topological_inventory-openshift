@@ -11,10 +11,9 @@ module TopologicalInventory
         class ServiceCatalogClient
           include Logging
 
-          attr_accessor :connection_manager, :sleep_poll, :source_id, :identity
+          attr_accessor :connection_manager, :source_id, :identity
 
           def initialize(source_id, identity = nil)
-            self.sleep_poll = 10
             self.identity   = identity
             self.source_id  = source_id
 
@@ -35,23 +34,18 @@ module TopologicalInventory
           end
 
           def wait_for_provision_complete(name, namespace)
-            service_instance = servicecatalog_connection.get_service_instance(name, namespace)
-
-            field_selector = "involvedObject.kind=#{service_instance.kind},"\
-                             "involvedObject.name=#{service_instance.metadata.name},"\
-                             "involvedObject.uid=#{service_instance.metadata.uid}"
+            field_selector = "involvedObject.kind=ServiceInstance,involvedObject.name=#{name}"
 
             watch = kubernetes_connection.watch_events(:namespace => namespace, :field_selector => field_selector)
             watch.each do |notice|
-              service_instance = notice.object.involvedObject
+              event = notice.object
 
-              condition = service_instance.status.conditions.first
-              logger.info("#{service_instance.metadata.name}: message [#{condition&.message}] status [#{condition&.status}] reason [#{condition&.reason}]")
+              logger.info("#{event.involvedObject.name}: message [#{event.message}] reason [#{event.reason}]")
+              next unless %w[ProvisionedSuccessfully ProvisionCallFailed].include?(event.reason)
 
-              break unless service_instance_provisioning?(service_instance)
+              service_instance = servicecatalog_connection.get_service_instance(name, namespace)
+              return service_instance, event.reason, event.message
             end
-
-            service_instance
           end
 
           def authentication
@@ -81,11 +75,6 @@ module TopologicalInventory
                 :parameters                      => safe_params
               }
             }
-          end
-
-          def service_instance_provisioning?(service_instance)
-            reason = service_instance.status.conditions.first&.reason
-            %w[Provisioning ProvisionRequestInFlight].include?(reason)
           end
 
           def kubernetes_connection

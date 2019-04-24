@@ -44,6 +44,8 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
     let(:service_instances_url) { URI.join(base_url_path, "service_instances?source_id=#{source.id}&source_ref=#{service_instance.source_ref}") }
     let(:task_url) { URI.join(base_url_path, "tasks/#{task.id}").to_s }
     let(:headers) { {"Content-Type" => "application/json", "x-rh-identity"=>"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjI0MCJ9fQ==\n"} }
+    let(:reason) { "ProvisionedSuccessfully" }
+    let(:message) { "Message" }
     let(:service_instance) do
       Kubeclient::Resource.new(
         :metadata => {
@@ -84,7 +86,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
       ).to receive(:new).with(source.id, identity).and_return(service_catalog_client)
 
       allow(service_catalog_client).to receive(:order_service_plan).and_return(service_instance)
-      allow(service_catalog_client).to receive(:wait_for_provision_complete).and_return(service_instance)
+      allow(service_catalog_client).to receive(:wait_for_provision_complete).and_return([service_instance, reason, message])
 
       stub_request(:patch, task_url).with(:headers => headers)
     end
@@ -99,10 +101,12 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
     it "makes a patch request to the update task endpoint with the status and context" do
       expected_context = {
         :service_instance => {
-          :source_id  => source.id,
-          :source_ref => service_instance.source_ref,
-          :id         => service_instance.id.to_s,
-          :url        => "#{base_url_path}service_instances/#{service_instance.id}"
+          :source_id         => source.id,
+          :source_ref        => service_instance.source_ref,
+          :provision_state   => reason,
+          :provision_message => message,
+          :id                => service_instance.id.to_s,
+          :url               => "#{base_url_path}service_instances/#{service_instance.id}"
         }
       }.to_json
 

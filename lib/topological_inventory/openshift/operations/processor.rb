@@ -63,12 +63,12 @@ module TopologicalInventory
         def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
           logger.info("Waiting for service [#{service_instance_name}] to provision...")
           catalog_client = Core::ServiceCatalogClient.new(source_id, request_context)
-          service_instance = catalog_client.wait_for_provision_complete(
+          service_instance, reason, message = catalog_client.wait_for_provision_complete(
             service_instance_name, service_instance_namespace
           )
           logger.info("Waiting for service [#{service_instance_name}] to provision...Complete")
 
-          context = svc_instance_context_with_url(source_id, service_instance)
+          context = svc_instance_context_with_url(source_id, service_instance, reason, message)
           status  = provisioning_status(service_instance)
 
           update_task(task_id, :state => "completed", :status => status, :context => context)
@@ -78,11 +78,13 @@ module TopologicalInventory
           update_task(task_id, :state => "completed", :status => "error", :context => {:error => err.to_s})
         end
 
-        def svc_instance_context_with_url(source_id, service_instance)
+        def svc_instance_context_with_url(source_id, service_instance, reason, message)
           context = {
             :service_instance => {
-              :source_id  => source_id,
-              :source_ref => service_instance.spec&.externalID
+              :source_id         => source_id,
+              :source_ref        => service_instance.spec&.externalID,
+              :provision_state   => reason,
+              :provision_message => message,
             }
           }
 
