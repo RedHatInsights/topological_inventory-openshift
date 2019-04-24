@@ -11,10 +11,9 @@ module TopologicalInventory
         class ServiceCatalogClient
           include Logging
 
-          attr_accessor :connection_manager, :sleep_poll, :source_id, :identity
+          attr_accessor :connection_manager, :source_id, :identity
 
           def initialize(source_id, identity = nil)
-            self.sleep_poll = 10
             self.identity   = identity
             self.source_id  = source_id
 
@@ -31,24 +30,22 @@ module TopologicalInventory
 
           def order_service_plan(plan_name, service_offering_name, additional_parameters)
             payload = build_payload(plan_name, service_offering_name, additional_parameters)
-            connection.create_service_instance(payload)
+            servicecatalog_connection.create_service_instance(payload)
           end
 
           def wait_for_provision_complete(name, namespace)
-            service_instance = nil
+            field_selector = "involvedObject.kind=ServiceInstance,involvedObject.name=#{name}"
 
-            loop do
-              sleep(sleep_poll)
+            watch = kubernetes_connection.watch_events(:namespace => namespace, :field_selector => field_selector)
+            watch.each do |notice|
+              event = notice.object
 
-              service_instance = connection.get_service_instance(name, namespace)
+              logger.info("#{event.involvedObject.name}: message [#{event.message}] reason [#{event.reason}]")
+              next unless %w[ProvisionedSuccessfully ProvisionCallFailed].include?(event.reason)
 
-              condition = service_instance.status.conditions.first
-              logger.info("#{service_instance.metadata.name}: message [#{condition&.message}] status [#{condition&.status}] reason [#{condition&.reason}]")
-
-              break unless service_instance_provisioning?(service_instance)
+              service_instance = servicecatalog_connection.get_service_instance(name, namespace)
+              return service_instance, event.reason, event.message
             end
-
-            service_instance
           end
 
           def authentication
@@ -80,17 +77,22 @@ module TopologicalInventory
             }
           end
 
-          def service_instance_provisioning?(service_instance)
-            reason = service_instance.status.conditions.first&.reason
-            %w[Provisioning ProvisionRequestInFlight].include?(reason)
+          def kubernetes_connection
+            raw_connect("kubernetes")
           end
 
-          def connection
-            Thread.current[:kubernetes_connection] ||= begin
-              raise "Unable to find a default endpoint for source [#{source_id}]" if default_endpoint.nil?
-              raise "Unable to find an authentication for source [#{source_id}]"  if authentication.nil?
+          def servicecatalog_connection
+            raw_connect("servicecatalog")
+          end
 
-              connection_manager.connect("servicecatalog", :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode)
+          def raw_connect(service)
+            raise "Unable to find a default endpoint for source [#{source_id}]" if default_endpoint.nil?
+            raise "Unable to find an authentication for source [#{source_id}]"  if authentication.nil?
+
+            Thread.current["#{service}_connection"] ||= begin
+              connection_manager.connect(
+                service, :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
+              )
             end
           end
 
