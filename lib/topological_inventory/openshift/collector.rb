@@ -203,6 +203,8 @@ module TopologicalInventory::Openshift
     end
 
     def sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
+      return if !total_parts || sweep_scope.empty?
+
       TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(:client => ingress_api_client, :logger => logger).save(
         :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
           :name               => "OCP",
