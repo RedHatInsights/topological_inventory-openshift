@@ -2,7 +2,7 @@ require 'more_core_extensions/core_ext/hash'
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/operations/core/authentication_retriever"
-require "topological_inventory/openshift/operations/core/task_update"
+require "topological_inventory/openshift/operations/core/topology_api_client"
 require "topological_inventory-api-client"
 
 module TopologicalInventory
@@ -11,7 +11,7 @@ module TopologicalInventory
       module Core
         class ServiceCatalogClient
           include Logging
-          include TaskUpdate
+          include TopologyApiClient
 
           attr_accessor :connection_manager, :source_id, :task_id, :identity
 
@@ -120,15 +120,6 @@ module TopologicalInventory
 
             auth_id = endpoint_authentications.first.id
             AuthenticationRetriever.new(auth_id, identity).process
-          end
-
-          def api_client
-            @api_client ||=
-              begin
-                api_client = TopologicalInventoryApiClient::ApiClient.new
-                api_client.default_headers.merge!(identity) if identity.present?
-                TopologicalInventoryApiClient::DefaultApi.new(api_client)
-              end
           end
         end
       end

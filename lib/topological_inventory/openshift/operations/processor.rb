@@ -1,19 +1,19 @@
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/core/service_catalog_client"
-require "topological_inventory/openshift/operations/core/task_update"
+require "topological_inventory/openshift/operations/core/topology_api_client"
 
 module TopologicalInventory
   module Openshift
     module Operations
       class Processor
         include Logging
-        include Core::TaskUpdate
+        include Core::TopologyApiClient
 
         def initialize(model, method, payload)
           self.model           = model
           self.method          = method
           self.params          = payload["params"]
-          self.request_context = payload["request_context"]
+          self.identity        = payload["request_context"]
         end
 
         def process
@@ -26,16 +26,16 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :model, :method, :params, :request_context
+        attr_accessor :identity, :model, :method, :params
 
         def order_service(params)
           task_id, service_plan_id, order_params = params.values_at("task_id", "service_plan_id", "order_params")
 
-          service_plan     = api_client.show_service_plan(service_plan_id)
-          service_offering = api_client.show_service_offering(service_plan.service_offering_id)
+          service_plan     = topology_api_client.show_service_plan(service_plan_id)
+          service_offering = topology_api_client.show_service_offering(service_plan.service_offering_id)
           source_id        = service_plan.source_id
 
-          catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, request_context)
+          catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, identity)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
           service_instance = catalog_client.order_service_plan(
@@ -59,7 +59,7 @@ module TopologicalInventory
 
         def poll_order_complete(task_id, source_id, service_instance_name, service_instance_namespace)
           logger.info("Waiting for service [#{service_instance_name}] to provision...")
-          catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, request_context)
+          catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, identity)
           service_instance, reason, message = catalog_client.wait_for_provision_complete(
             service_instance_name, service_instance_namespace
           )
@@ -97,7 +97,7 @@ module TopologicalInventory
 
         def svc_instance_url(svc_instance)
           rest_api_path = '/service_instances/{id}'.sub('{' + 'id' + '}', svc_instance&.id.to_s)
-          api_client.api_client.build_request(:GET, rest_api_path).url
+          topology_api_client.api_client.build_request(:GET, rest_api_path).url
         end
 
         def provisioning_status(service_instance)
@@ -106,12 +106,12 @@ module TopologicalInventory
         end
 
         # Current API client doesn't support source_id and source_ref filtering
-        # This is modified version of api_client.list_service_instances
+        # This is modified version of topology_api_client.list_service_instances
         def svc_instance_by_source_ref(source_id, source_ref)
           sleep_poll   = 10
           poll_timeout = 1800
 
-          api = api_client.api_client
+          api = topology_api_client.api_client
 
           header_params = { 'Accept' => api.select_header_accept(['application/json']) }
           query_params = { :'source_id' => source_id, :'source_ref' => source_ref }
@@ -141,15 +141,6 @@ module TopologicalInventory
           end
 
           service_instance
-        end
-
-        def api_client
-          @api_client ||=
-            begin
-              api_client = TopologicalInventoryApiClient::ApiClient.new
-              api_client.default_headers.merge!(request_context) if request_context.present?
-              TopologicalInventoryApiClient::DefaultApi.new(api_client)
-            end
         end
       end
     end
