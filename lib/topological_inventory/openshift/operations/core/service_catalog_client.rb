@@ -2,6 +2,7 @@ require 'more_core_extensions/core_ext/hash'
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/operations/core/authentication_retriever"
+require "topological_inventory/openshift/operations/core/topology_api_client"
 require "topological_inventory-api-client"
 
 module TopologicalInventory
@@ -10,12 +11,14 @@ module TopologicalInventory
       module Core
         class ServiceCatalogClient
           include Logging
+          include TopologyApiClient
 
-          attr_accessor :connection_manager, :source_id, :identity
+          attr_accessor :connection_manager, :source_id, :task_id, :identity
 
-          def initialize(source_id, identity = nil)
+          def initialize(source_id, task_id, identity = nil)
             self.identity   = identity
             self.source_id  = source_id
+            self.task_id    = task_id
 
             self.connection_manager = TopologicalInventory::Openshift::Connection.new
           end
@@ -41,6 +44,9 @@ module TopologicalInventory
               event = notice.object
 
               logger.info("#{event.involvedObject.name}: message [#{event.message}] reason [#{event.reason}]")
+              context = {:reason => event.reason, :message => event.message}
+              update_task(task_id, :state => "running", :status => "ok", :context => context)
+
               next unless %w[ProvisionedSuccessfully ProvisionCallFailed].include?(event.reason)
 
               service_instance = servicecatalog_connection.get_service_instance(name, namespace)
