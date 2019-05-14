@@ -4,7 +4,6 @@ require "topological_inventory/openshift"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
-require "topological_inventory/openshift/collector/metrics"
 require "topological_inventory-ingress_api-client"
 require "topological_inventory-ingress_api-client/save_inventory/saver"
 
@@ -12,12 +11,12 @@ module TopologicalInventory::Openshift
   class Collector
     include Logging
 
-    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 500, poll_time: 30)
+    def initialize(source, openshift_host, openshift_port, openshift_token, metrics, default_limit: 500, poll_time: 30)
       self.connection_manager = Connection.new
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.limits            = Hash.new(default_limit)
-      self.metrics           = TopologicalInventory::Openshift::Collector::Metrics.new
+      self.metrics           = metrics
       self.openshift_host    = openshift_host
       self.openshift_port    = openshift_port
       self.openshift_token   = openshift_token
@@ -49,8 +48,6 @@ module TopologicalInventory::Openshift
           sleep(poll_time * errors)
         end
       end
-    ensure
-      metrics.stop_server
     end
 
     def stop

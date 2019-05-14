@@ -5,6 +5,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       "mock_openshift.redhat.com",
       "8443",
       "secret",
+      metrics
     )
 
     allow(collector).to receive(:ingress_api_client).and_return(client)
@@ -15,13 +16,18 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
 
   let(:parser) { TopologicalInventory::Openshift::Parser.new(:openshift_host => "localhost") }
 
-  let(:source) { "source_uid" }
-  let(:client) { double }
-  let(:logger) { double }
+  let(:source)  { "source_uid" }
+  let(:client)  { double }
+  let(:logger)  { double }
+  let(:metrics) { TopologicalInventory::Openshift::Collector::Metrics.new }
   let(:refresh_state_uuid) { SecureRandom.uuid }
   let(:refresh_state_part_uuid) { SecureRandom.uuid }
   # Current limit is 1 MB, so that is max 1000 entities of the current size, if the limit is 2MB change this to 2
   let(:multiplier) { 1 }
+
+  after do
+    metrics.stop_server
+  end
 
   context "#save_inventory" do
     it "does nothing with empty collections" do
