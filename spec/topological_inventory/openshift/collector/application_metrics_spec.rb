@@ -1,7 +1,7 @@
-require "topological_inventory/openshift/collector/metrics"
+require "topological_inventory/openshift/collector/application_metrics"
 require "net/http"
 
-RSpec.describe TopologicalInventory::Openshift::Collector::Metrics do
+RSpec.describe TopologicalInventory::Openshift::Collector::ApplicationMetrics do
   around do |example|
     WebMock.disable!
     example.run

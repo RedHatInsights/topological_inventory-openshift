@@ -5,7 +5,7 @@ require 'prometheus_exporter/instrumentation'
 
 module TopologicalInventory::Openshift
   class Collector
-    class Metrics
+    class ApplicationMetrics
       def initialize(port = 9394)
         configure_server(port)
         configure_metrics
