@@ -11,11 +11,12 @@ module TopologicalInventory::Openshift
   class Collector
     include Logging
 
-    def initialize(source, openshift_host, openshift_port, openshift_token, default_limit: 500, poll_time: 30)
+    def initialize(source, openshift_host, openshift_port, openshift_token, metrics, default_limit: 500, poll_time: 30)
       self.connection_manager = Connection.new
       self.collector_threads = Concurrent::Map.new
       self.finished          = Concurrent::AtomicBoolean.new(false)
       self.limits            = Hash.new(default_limit)
+      self.metrics           = metrics
       self.openshift_host    = openshift_host
       self.openshift_port    = openshift_port
       self.openshift_token   = openshift_token
@@ -40,6 +41,7 @@ module TopologicalInventory::Openshift
           errors = 0
           sleep(poll_time)
         rescue => err
+          metrics.record_error
           logger.error(err)
 
           errors += 1 unless errors > 10
@@ -55,7 +57,7 @@ module TopologicalInventory::Openshift
     private
 
     attr_accessor :connection_manager, :collector_threads, :finished, :limits,
-                  :openshift_host, :openshift_token, :openshift_port,
+                  :metrics, :openshift_host, :openshift_token, :openshift_port,
                   :poll_time, :queue, :source
 
     def finished?

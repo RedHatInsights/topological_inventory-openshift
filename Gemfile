@@ -7,6 +7,7 @@ gem "activesupport", "~> 5.2.2"
 gem "concurrent-ruby"
 gem "more_core_extensions"
 gem "optimist"
+gem "prometheus_exporter", "~> 0.4.5"
 gem "rake"
 
 gem "kubeclient", :git => "https://github.com/abonas/kubeclient", :branch => "master"
