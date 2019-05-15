@@ -28,7 +28,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
     it "does nothing with empty collections" do
       parts = collector.send(:save_inventory, [], refresh_state_uuid, refresh_state_part_uuid)
 
-      expect(parts).to be_nil
+      expect(parts).to eq 0
     end
 
     it "saves 1 part if it fits" do
