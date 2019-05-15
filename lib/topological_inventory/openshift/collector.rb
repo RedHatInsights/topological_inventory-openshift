@@ -190,7 +190,7 @@ module TopologicalInventory::Openshift
     end
 
     def save_inventory(collections, refresh_state_uuid = nil, refresh_state_part_uuid = nil)
-      return if collections.empty?
+      return 0 if collections.empty?
 
       TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(:client => ingress_api_client, :logger => logger).save(
         :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
