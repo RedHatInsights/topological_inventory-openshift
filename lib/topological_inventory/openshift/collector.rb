@@ -202,6 +202,11 @@ module TopologicalInventory::Openshift
           :refresh_state_part_uuid => refresh_state_part_uuid,
         )
       )
+    rescue => e
+      response_body = e.response_body if e.respond_to? :response_body
+      response_headers = e.response_headers if e.respond_to? :response_headers
+      logger.error("Error when sending payload to Ingress API. Error message: #{e.message}. Body: #{response_body}. Header: #{response_headers}")
+      raise e
     end
 
     def sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
@@ -218,6 +223,11 @@ module TopologicalInventory::Openshift
           :sweep_scope        => sweep_scope,
         )
       )
+    rescue => e
+      response_body = e.response_body if e.respond_to? :response_body
+      response_headers = e.response_headers if e.respond_to? :response_headers
+      logger.error("Error when sending payload to Ingress API. Error message: #{e.message}. Body: #{response_body}. Header: #{response_headers}")
+      raise e
     end
 
     def entity_types

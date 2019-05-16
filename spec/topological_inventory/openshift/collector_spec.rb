@@ -10,6 +10,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
 
     allow(collector).to receive(:ingress_api_client).and_return(client)
     allow(collector).to receive(:logger).and_return(logger)
+    allow(logger).to receive(:error)
 
     collector
   end
