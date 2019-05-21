@@ -102,7 +102,7 @@ module TopologicalInventory::Openshift
         parser.send("parse_#{entity_type}", entities)
 
         refresh_state_part_uuid = SecureRandom.uuid
-        total_parts += save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+        total_parts += save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid)
         sweep_scope.merge(parser.collections.values.map(&:name))
 
         break if entities.last?
@@ -113,7 +113,7 @@ module TopologicalInventory::Openshift
       sweep_scope = sweep_scope.to_a
       logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
-      sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
+      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, sweep_scope)
 
       logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
@@ -132,9 +132,9 @@ module TopologicalInventory::Openshift
 
       refresh_state_uuid      = SecureRandom.uuid
       refresh_state_part_uuid = SecureRandom.uuid
-      total_parts = save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+      total_parts = save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid)
 
-      sweep_inventory(refresh_state_uuid, total_parts, parse_targeted_sweep_scope(parser.collections.values))
+      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, parse_targeted_sweep_scope(parser.collections.values))
     end
 
     def parse_targeted_sweep_scope(collections)
