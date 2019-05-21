@@ -23,6 +23,7 @@ def parse_args
         :type => :string, :required => ENV["AUTH_PASSWORD"].nil?, :default => ENV["AUTH_PASSWORD"]
     opt :ingress_api, "Hostname of the ingress-api route",
         :type => :string, :default => ENV["INGRESS_API"] || "http://localhost:9292"
+    opt :metrics_port, "Port to expose the metrics endpoint on, 0 to disable metrics", :type => :integer, :default => (ENV["METRICS_PORT"] || 9394).to_i
   end
 
   opts
