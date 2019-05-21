@@ -7,16 +7,18 @@ module TopologicalInventory::Openshift
   class Collector
     class ApplicationMetrics
       def initialize(port = 9394)
+        return if port == 0
+
         configure_server(port)
         configure_metrics
       end
 
       def record_error
-        @errors_counter.observe(1)
+        @errors_counter&.observe(1)
       end
 
       def stop_server
-        @server.stop
+        @server&.stop
       end
 
       private
