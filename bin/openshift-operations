@@ -3,6 +3,7 @@
 $LOAD_PATH << File.expand_path("../lib", __dir__)
 require "bundler/setup"
 require "topological_inventory/openshift/operations/worker"
+require "topological_inventory/openshift/operations/application_metrics"
 
 queue_host = ENV["QUEUE_HOST"] || "localhost"
 queue_port = ENV["QUEUE_PORT"] || 9092
@@ -17,5 +18,12 @@ SourcesApiClient.configure do |config|
   config.host   = "#{ENV["SOURCES_HOST"]}:#{ENV["SOURCES_PORT"]}"
 end
 
-operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(:host => queue_host, :port => queue_port)
-operations_worker.run
+metrics_port = (ENV["METRICS_PORT"] || 9394).to_i
+
+begin
+  metrics = TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(metrics_port)
+  operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(metrics, :host => queue_host, :port => queue_port)
+  operations_worker.run
+ensure
+  metrics.stop_server
+end

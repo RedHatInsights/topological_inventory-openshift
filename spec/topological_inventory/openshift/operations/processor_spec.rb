@@ -1,7 +1,9 @@
 require "topological_inventory/openshift/operations/processor"
+require "topological_inventory/openshift/operations/application_metrics"
 
 RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
-  let(:client) { double(:client) }
+  let(:client)  { double(:client) }
+  let(:metrics) { TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(0) }
 
   describe "#order_service (private)" do
     let(:task) { double("Task", :id => 1) }
@@ -94,7 +96,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
     it "orders the service via the service catalog client" do
       expect(service_catalog_client).to receive(:order_service_plan).with("plan_name", "service_offering", "order_params")
       expect(service_catalog_client).to receive(:wait_for_provision_complete).with(service_instance.metadata.name, service_instance.metadata.namespace)
-      thread = described_class.new("ServicePlan", "order", payload).process
+      thread = described_class.new("ServicePlan", "order", payload, metrics).process
       thread.join
     end
 
@@ -110,7 +112,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
         }
       }.to_json
 
-      thread = described_class.new("ServicePlan", "order", payload).process
+      thread = described_class.new("ServicePlan", "order", payload, metrics).process
       thread.join
 
       expect(

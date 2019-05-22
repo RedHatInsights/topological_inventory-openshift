@@ -10,7 +10,8 @@ module TopologicalInventory
       class Worker
         include Logging
 
-        def initialize(messaging_client_opts = {})
+        def initialize(metrics, messaging_client_opts = {})
+          self.metrics               = metrics
           self.messaging_client_opts = default_messaging_opts.merge(messaging_client_opts)
         end
 
@@ -32,14 +33,15 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :messaging_client_opts
+        attr_accessor :messaging_client_opts, :metrics
 
         def process_message(message)
           model, method = message.message.split(".")
 
-          processor = Processor.new(model, method, message.payload)
+          processor = Processor.new(model, method, message.payload, metrics)
           processor.process
         rescue => err
+          metrics.record_error
           logger.error(err)
           logger.error(err.backtrace.join("\n"))
         end
