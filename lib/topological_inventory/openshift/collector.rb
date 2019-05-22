@@ -5,7 +5,6 @@ require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
 require "topological_inventory-ingress_api-client"
-require "topological_inventory-ingress_api-client/save_inventory/saver"
 
 module TopologicalInventory::Openshift
   class Collector < TopologicalInventoryIngressApiClient::Collector
