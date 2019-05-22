@@ -37,7 +37,7 @@ TopologicalInventoryIngressApiClient.configure.scheme = ingress_api_uri.scheme |
 TopologicalInventoryIngressApiClient.configure.host   = "#{ingress_api_uri.host}:#{ingress_api_uri.port}"
 
 begin
-  metrics = TopologicalInventory::Openshift::Collector::ApplicationMetrics.new
+  metrics = TopologicalInventory::Openshift::Collector::ApplicationMetrics.new(args[:metrics_port])
   collector = TopologicalInventory::Openshift::Collector.new(args[:source], args[:host], args[:port], args[:token], metrics)
   collector.collect!
 ensure
