@@ -9,11 +9,12 @@ module TopologicalInventory
         include Logging
         include Core::TopologyApiClient
 
-        def initialize(model, method, payload)
+        def initialize(model, method, payload, metrics)
           self.model           = model
           self.method          = method
           self.params          = payload["params"]
           self.identity        = payload["request_context"]
+          self.metrics         = metrics
         end
 
         def process
@@ -26,7 +27,7 @@ module TopologicalInventory
 
         private
 
-        attr_accessor :identity, :model, :method, :params
+        attr_accessor :identity, :model, :method, :metrics, :params
 
         def order_service(params)
           task_id, service_plan_id, order_params = params.values_at("task_id", "service_plan_id", "order_params")
@@ -45,6 +46,7 @@ module TopologicalInventory
 
           poll_order_complete_thread(task_id, source_id, service_instance)
         rescue StandardError => err
+          metrics.record_error
           logger.error("Exception while ordering #{err}")
           logger.error(err.backtrace.join("\n"))
           update_task(task_id, :state => "completed", :status => "error", :context => {:error => err.to_s})

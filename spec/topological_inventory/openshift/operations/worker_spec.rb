@@ -1,9 +1,11 @@
 require "topological_inventory/openshift/operations/worker"
+require "topological_inventory/openshift/operations/application_metrics"
 
 RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
   describe "#run" do
-    let(:client) { double("ManageIQ::Messaging::Client") }
-    let(:subject) { described_class.new }
+    let(:client)  { double("ManageIQ::Messaging::Client") }
+    let(:metrics) { TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(0) }
+    let(:subject) { described_class.new(metrics) }
     before do
       allow(ManageIQ::Messaging::Client).to receive(:open).and_return(client)
       allow(client).to receive(:close)
