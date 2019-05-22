@@ -27,7 +27,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
 
   context "#save_inventory" do
     it "does nothing with empty collections" do
-      parts = collector.send(:save_inventory, [], refresh_state_uuid, refresh_state_part_uuid)
+      parts = collector.send(:save_inventory, [], collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid)
 
       expect(parts).to eq 0
     end
@@ -38,7 +38,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       expect(inventory_size(parser.collections.values)).to eq(999242)
 
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
-      parts = collector.send(:save_inventory, parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+      parts = collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid)
       expect(parts).to eq 1
     end
 
@@ -48,7 +48,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       expect(inventory_size(parser.collections.values)).to eq(1998242)
 
       expect(client).to receive(:save_inventory_with_http_info).exactly(2).times
-      parts = collector.send(:save_inventory, parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+      parts = collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid)
       expect(parts).to eq 2
     end
 
@@ -59,7 +59,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       expect(inventory_size(parser.collections.values)).to eq(1998278)
 
       expect(client).to receive(:save_inventory_with_http_info).exactly(2).times
-      parts = collector.send(:save_inventory, parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+      parts = collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid)
       expect(parts).to eq 2
     end
 
@@ -68,7 +68,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       (multiplier * 2000).times { parser.collections.container_nodes.build(:source_ref => "a" * 981) }
 
       expect(client).to receive(:save_inventory_with_http_info).exactly(4).times
-      parts = collector.send(:save_inventory, parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+      parts = collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid)
       expect(parts).to eq 4
     end
 
@@ -79,7 +79,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       # in this case, we first save empty inventory, then the size check fails saving the rest of data
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
-      expect { collector.send(:save_inventory, parser.collections.values, refresh_state_uuid, refresh_state_part_uuid) }.to(
+      expect { collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid) }.to(
         raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
       )
     end
@@ -92,7 +92,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       # We save the first collection then it fails on saving the second collection
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
-      expect { collector.send(:save_inventory, parser.collections.values, refresh_state_uuid, refresh_state_part_uuid) }.to(
+      expect { collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid) }.to(
         raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
       )
     end
@@ -106,7 +106,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       # We save the first collection then it fails on saving the second collection
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
-      expect { collector.send(:save_inventory, parser.collections.values, refresh_state_uuid, refresh_state_part_uuid) }.to(
+      expect { collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid) }.to(
         raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
       )
     end
@@ -116,25 +116,25 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
     it "with nil total parts" do
       expect(client).to receive(:save_inventory_with_http_info).exactly(0).times
 
-      collector.send(:sweep_inventory, refresh_state_uuid, nil, [])
+      collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, nil, [])
     end
 
     it "with empty scope " do
       expect(client).to receive(:save_inventory_with_http_info).exactly(0).times
 
-      collector.send(:sweep_inventory, refresh_state_uuid, 1, [])
+      collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, 1, [])
     end
 
     it "with normal scope " do
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
-      collector.send(:sweep_inventory, refresh_state_uuid, 1, [:container_groups])
+      collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, 1, [:container_groups])
     end
 
     it "with normal targeted scope " do
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
-      collector.send(:sweep_inventory, refresh_state_uuid, 1, {:container_groups => [{:source_ref => "a"}]})
+      collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, 1, {:container_groups => [{:source_ref => "a"}]})
     end
 
     it "fails with scope entity too large " do
@@ -142,7 +142,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
 
       sweep_scope = {:container_groups => [{:source_ref => "a" * 1_000_002 * multiplier}]}
 
-      expect { collector.send(:sweep_inventory, refresh_state_uuid, 1, sweep_scope) }.to(
+      expect { collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, 1, sweep_scope) }.to(
         raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
       )
     end
@@ -153,7 +153,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
 
       sweep_scope = {:container_groups => (0..1001 * multiplier).map { {:source_ref => "a" * 1_000} } }
 
-      expect { collector.send(:sweep_inventory, refresh_state_uuid, 1, sweep_scope) }.to(
+      expect { collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, 1, sweep_scope) }.to(
         raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
       )
     end
@@ -161,8 +161,8 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
 
   def build_inventory(collections)
     TopologicalInventoryIngressApiClient::Inventory.new(
-      :name                    => "OCP",
-      :schema                  => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
+      :name                    => collector.send(:inventory_name),
+      :schema                  => TopologicalInventoryIngressApiClient::Schema.new(:name => collector.send(:schema_name)),
       :source                  => source,
       :collections             => collections,
       :refresh_state_uuid      => refresh_state_uuid,

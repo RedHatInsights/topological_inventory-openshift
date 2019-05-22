@@ -5,24 +5,21 @@ require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
 require "topological_inventory-ingress_api-client"
-require "topological_inventory-ingress_api-client/save_inventory/saver"
 
 module TopologicalInventory::Openshift
-  class Collector
+  class Collector < TopologicalInventoryIngressApiClient::Collector
     include Logging
 
     def initialize(source, openshift_host, openshift_port, openshift_token, metrics, default_limit: 500, poll_time: 30)
+      super(source,
+            :default_limit => default_limit,
+            :poll_time     => poll_time)
+
       self.connection_manager = Connection.new
-      self.collector_threads = Concurrent::Map.new
-      self.finished          = Concurrent::AtomicBoolean.new(false)
-      self.limits            = Hash.new(default_limit)
       self.metrics           = metrics
       self.openshift_host    = openshift_host
       self.openshift_port    = openshift_port
       self.openshift_token   = openshift_token
-      self.poll_time         = poll_time
-      self.queue             = Queue.new
-      self.source            = source
     end
 
     def collect!
@@ -50,37 +47,16 @@ module TopologicalInventory::Openshift
       end
     end
 
-    def stop
-      finished.value = true
-    end
-
     private
 
-    attr_accessor :connection_manager, :collector_threads, :finished, :limits,
-                  :metrics, :openshift_host, :openshift_token, :openshift_port,
-                  :poll_time, :queue, :source
+    attr_accessor :connection_manager,
+                  :metrics, :openshift_host, :openshift_token, :openshift_port
 
-    def finished?
-      finished.value
-    end
-
-    def ensure_collector_threads
-      entity_types.each do |entity_type|
-        next if collector_threads[entity_type]&.alive?
-
-        collector_threads[entity_type] = start_collector_thread(entity_type)
-      end
-    end
-    alias start_collector_threads ensure_collector_threads
 
     def start_collector_thread(entity_type)
       logger.info("Starting collector thread for #{entity_type}...")
-      connection = connection_for_entity_type(entity_type)
-      return if connection.nil?
 
-      Thread.new do
-        collector_thread(connection, entity_type)
-      end
+      super
     rescue Kubeclient::ResourceNotFoundError => err
       logger.warn("Entity type '#{entity_type}' not found: #{err}")
       nil
@@ -125,7 +101,7 @@ module TopologicalInventory::Openshift
         parser.send("parse_#{entity_type}", entities)
 
         refresh_state_part_uuid = SecureRandom.uuid
-        total_parts += save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+        total_parts += save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid)
         sweep_scope.merge(parser.collections.values.map(&:name))
 
         break if entities.last?
@@ -136,7 +112,7 @@ module TopologicalInventory::Openshift
       sweep_scope = sweep_scope.to_a
       logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
-      sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
+      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, sweep_scope)
 
       logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
@@ -155,9 +131,9 @@ module TopologicalInventory::Openshift
 
       refresh_state_uuid      = SecureRandom.uuid
       refresh_state_part_uuid = SecureRandom.uuid
-      total_parts = save_inventory(parser.collections.values, refresh_state_uuid, refresh_state_part_uuid)
+      total_parts = save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid)
 
-      sweep_inventory(refresh_state_uuid, total_parts, parse_targeted_sweep_scope(parser.collections.values))
+      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, parse_targeted_sweep_scope(parser.collections.values))
     end
 
     def parse_targeted_sweep_scope(collections)
@@ -187,51 +163,6 @@ module TopologicalInventory::Openshift
         :service_offering_tags   => [:container_offering],
         :service_offering_icons  => [:container_offering],
       }
-    end
-
-    def save_inventory(collections, refresh_state_uuid = nil, refresh_state_part_uuid = nil)
-      return 0 if collections.empty?
-
-      TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(:client => ingress_api_client, :logger => logger).save(
-        :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
-          :name                    => "OCP",
-          :schema                  => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
-          :source                  => source,
-          :collections             => collections,
-          :refresh_state_uuid      => refresh_state_uuid,
-          :refresh_state_part_uuid => refresh_state_part_uuid,
-        )
-      )
-    rescue => e
-      response_body = e.response_body if e.respond_to? :response_body
-      response_headers = e.response_headers if e.respond_to? :response_headers
-      logger.error("Error when sending payload to Ingress API. Error message: #{e.message}. Body: #{response_body}. Header: #{response_headers}")
-      raise e
-    end
-
-    def sweep_inventory(refresh_state_uuid, total_parts, sweep_scope)
-      return if !total_parts || sweep_scope.empty?
-
-      TopologicalInventoryIngressApiClient::SaveInventory::Saver.new(:client => ingress_api_client, :logger => logger).save(
-        :inventory => TopologicalInventoryIngressApiClient::Inventory.new(
-          :name               => "OCP",
-          :schema             => TopologicalInventoryIngressApiClient::Schema.new(:name => "Default"),
-          :source             => source,
-          :collections        => [],
-          :refresh_state_uuid => refresh_state_uuid,
-          :total_parts        => total_parts,
-          :sweep_scope        => sweep_scope,
-        )
-      )
-    rescue => e
-      response_body = e.response_body if e.respond_to? :response_body
-      response_headers = e.response_headers if e.respond_to? :response_headers
-      logger.error("Error when sending payload to Ingress API. Error message: #{e.message}. Body: #{response_body}. Header: #{response_headers}")
-      raise e
-    end
-
-    def entity_types
-      endpoint_types.flat_map { |endpoint| send("#{endpoint}_entity_types") }
     end
 
     def kubernetes_entity_types
@@ -267,6 +198,11 @@ module TopologicalInventory::Openshift
 
     def connection_params
       {:host => openshift_host, :port => openshift_port, :token => openshift_token}
+    end
+
+    # Used for Save & Sweep Inventory
+    def inventory_name
+      "OCP"
     end
 
     def ingress_api_client
