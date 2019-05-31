@@ -35,7 +35,7 @@ module TopologicalInventory::Openshift
         (tags || {}).each do |key, value|
           collections.container_group_tags.build(
             :container_group => lazy_find(:container_groups, :source_ref => source_ref),
-            :tag             => lazy_find(:tags, :name => key, :value => value),
+            :tag             => lazy_find(:tags, :name => key, :value => value, :namespace => "openshift"),
           )
         end
       end
