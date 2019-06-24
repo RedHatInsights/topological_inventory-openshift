@@ -1,0 +1,12 @@
+# You can use *.dev.yml for your development sources
+sources:
+  - source: 31b5338b-685d-4056-ba39-d00b4d7f19cc
+    scheme: https
+    host: host1
+    port: 8443
+    token: abcdef
+  - source: a09b9785-0f71-4dcf-9f9d-de0f0478b09f
+    scheme: https
+    host: host2
+    port: 8443
+    token: 123456

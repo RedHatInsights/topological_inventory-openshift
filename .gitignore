@@ -46,3 +46,6 @@ bundler.d/*
 
 # unless supporting rvm < 1.11.0 or doing something fancy, ignore this:
 .rvmrc
+
+# dev configs
+/config/*.dev.yml

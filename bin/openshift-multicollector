@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+lib = File.expand_path("../lib", __dir__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+
+require "bundler/setup"
+require "topological_inventory/openshift/collectors_pool"
+require "topological_inventory/openshift/collector/application_metrics"
+
+def parse_args
+  require 'optimist'
+  opts = Optimist.options do
+    opt :config, "Sources configuration YAML file", :type => :string, :required => ENV["CONFIG"].nil?, :default => ENV["CONFIG"] || "settings"
+    opt :ingress_api, "Hostname of the ingress-api route",
+        :type => :string, :default => ENV["INGRESS_API"] || "http://localhost:9292"
+    opt :metrics_port, "Port to expose the metrics endpoint on, 0 to disable metrics", :type => :integer, :default => (ENV["METRICS_PORT"] || 9394).to_i
+  end
+
+  opts
+end
+
+args = parse_args
+
+ingress_api_uri = URI(args[:ingress_api])
+
+TopologicalInventoryIngressApiClient.configure.scheme = ingress_api_uri.scheme || "http"
+TopologicalInventoryIngressApiClient.configure.host   = "#{ingress_api_uri.host}:#{ingress_api_uri.port}"
+
+begin
+  metrics = TopologicalInventory::Openshift::Collector::ApplicationMetrics.new(args[:metrics_port])
+  pool = TopologicalInventory::Openshift::CollectorsPool.new(args[:config], metrics)
+  pool.run!
+ensure
+  pool&.stop!
+  metrics&.stop_server
+end
