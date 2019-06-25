@@ -26,10 +26,10 @@ module TopologicalInventory::Openshift
     end
 
     def stop!
-      collectors.each_value { |collector| collector.stop }
+      collectors.each_value(&:stop)
 
       # Wait for end of collectors to ensure metrics are stopped after them
-      collector_threads.each { |thread| thread.join }
+      collector_threads.each { |thread| thread.kill unless thread.join(30) }
     end
 
     private
@@ -46,7 +46,7 @@ module TopologicalInventory::Openshift
     end
 
     def add_new_collectors
-      (::Settings.sources || []).each do |source|
+      ::Settings.sources.to_a.each do |source|
         if collectors[source.source].nil?
           thread = Thread.new do
             collector = TopologicalInventory::Openshift::Collector.new(source.source, source.host, source.port, source.token, metrics)
@@ -59,12 +59,12 @@ module TopologicalInventory::Openshift
     end
 
     def remove_old_collectors
-      requested_uids = (::Settings.sources || []).collect { |source| source.source }
+      requested_uids = ::Settings.sources.to_a.collect(&:source)
       existing_uids = collectors.keys
 
       (existing_uids - requested_uids).each do |source_uid|
         collector = collectors.delete(source_uid)
-        collector.stop unless collector.nil?
+        collector&.stop
         collector_threads.delete(source_uid)
       end
     end
