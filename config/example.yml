@@ -1,4 +1,4 @@
-# You can use *.dev.yml for your development sources
+# You can use *-dev.yml for your development sources
 sources:
   - source: 31b5338b-685d-4056-ba39-d00b4d7f19cc
     scheme: https

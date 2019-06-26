@@ -8,10 +8,6 @@ require "kubeclient"
 require "rspec"
 require "webmock/rspec"
 require "topological_inventory/openshift/collector"
-require "topological_inventory/openshift/collectors_pool"
-
-spec_path = File.dirname(__FILE__)
-Dir[File.join(spec_path, "helpers/**/*.rb")].each { |f| require f }
 
 RSpec.configure do |config|
   # Disable RSpec exposing methods globally on `Module` and `main`

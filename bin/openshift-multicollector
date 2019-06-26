@@ -7,6 +7,7 @@ require "bundler/setup"
 require "topological_inventory/openshift/collectors_pool"
 require "topological_inventory/openshift/collector/application_metrics"
 
+# Note: Config file config/*-dev.yml is excluded from GIT
 def parse_args
   require 'optimist'
   opts = Optimist.options do

@@ -48,4 +48,4 @@ bundler.d/*
 .rvmrc
 
 # dev configs
-/config/*.dev.yml
+/config/*-dev.yml
