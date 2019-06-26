@@ -7,11 +7,11 @@ module TopologicalInventory::Openshift
     include Logging
 
     def initialize(config_name, metrics, poll_time: 10)
-      self.collectors  = {}
+      self.collectors        = {}
       self.collector_threads = {}
-      self.config_name = config_name
-      self.metrics     = metrics
-      self.poll_time   = poll_time
+      self.config_name       = config_name
+      self.metrics           = metrics
+      self.poll_time         = poll_time
     end
 
     def run!
@@ -29,7 +29,7 @@ module TopologicalInventory::Openshift
       collectors.each_value(&:stop)
 
       # Wait for end of collectors to ensure metrics are stopped after them
-      collector_threads.each { |thread| thread.kill unless thread.join(30) }
+      collector_threads.each_value { |thread| thread.kill unless thread.join(30) }
     end
 
     private
@@ -47,14 +47,12 @@ module TopologicalInventory::Openshift
 
     def add_new_collectors
       ::Settings.sources.to_a.each do |source|
-        if collectors[source.source].nil?
-          thread = Thread.new do
-            collector = TopologicalInventory::Openshift::Collector.new(source.source, source.host, source.port, source.token, metrics)
-            collectors[source] = collector
-            collector.collect!
-          end
-          collector_threads[source.source] = thread
-        end
+        next if collectors[source.source].present?
+
+        collector = new_collector(source)
+        collectors[source.source] = collector
+        thread = Thread.new { collector.collect! }
+        collector_threads[source.source] = thread
       end
     end
 
@@ -64,8 +62,8 @@ module TopologicalInventory::Openshift
 
       (existing_uids - requested_uids).each do |source_uid|
         collector = collectors.delete(source_uid)
-        collector&.stop
         collector_threads.delete(source_uid)
+        collector&.stop
       end
     end
 
@@ -80,6 +78,10 @@ module TopologicalInventory::Openshift
     def sanitize_filename(filename)
       # Remove any character that aren't 0-9, A-Z, or a-z, / or -
       filename.gsub(/[^0-9A-Z\/\-]/i, '_')
+    end
+
+    def new_collector(source)
+      TopologicalInventory::Openshift::Collector.new(source.source, source.host, source.port, source.token, metrics)
     end
   end
 end
