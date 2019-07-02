@@ -5,31 +5,48 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 require "bundler/setup"
 require "topological_inventory/openshift/collector"
+require "topological_inventory/openshift/collectors_pool"
 require "topological_inventory/openshift/collector/application_metrics"
 
 def parse_args
   require 'optimist'
   opts = Optimist.options do
-    opt :source, "Inventory Source UID", :type => :string, :required => ENV["SOURCE_UID"].nil?, :default => ENV["SOURCE_UID"]
+    opt :config, "Sources configuration YAML file",
+        :type => :string, :default => ENV["CONFIG"]
+    opt :source, "Inventory Source UID",
+        :type => :string, :default => ENV["SOURCE_UID"], :required => ENV["SOURCE_UID"].nil?
     opt :scheme, "Protocol scheme for connecting to the Openshift master node, default: https",
-        :type => :string, :required => ENV["ENDPOINT_SCHEME"].nil?, :default => (ENV["ENDPOINT_SCHEME"] || "https")
+        :type => :string, :default => (ENV["ENDPOINT_SCHEME"] || "https")
     opt :host, "IP address or hostname of the Openshift master node",
-        :type => :string, :required => ENV["ENDPOINT_HOST"].nil?, :default => ENV["ENDPOINT_HOST"]
+        :type => :string, :default => ENV["ENDPOINT_HOST"]
     opt :port, "Port of the OpenShift master node, default: 8443",
-        :type => :int, :required => false, :default => (ENV["ENDPOINT_PORT"] || 8443).to_i
+        :type => :integer, :default => (ENV["ENDPOINT_PORT"] || 8443).to_i
     opt :path, "Path to the kubernetes API, default: /api",
-        :type => :string, :required => ENV["ENDPOINT_PATH"].nil?, :default => (ENV["ENDPOINT_PATH"] || "/api")
+        :type => :string, :default => (ENV["ENDPOINT_PATH"] || "/api")
     opt :token, "Auth token to the OpenShift cluster",
-        :type => :string, :required => ENV["AUTH_PASSWORD"].nil?, :default => ENV["AUTH_PASSWORD"]
+        :type => :string, :default => ENV["AUTH_PASSWORD"]
     opt :ingress_api, "Hostname of the ingress-api route",
         :type => :string, :default => ENV["INGRESS_API"] || "http://localhost:9292"
-    opt :metrics_port, "Port to expose the metrics endpoint on, 0 to disable metrics", :type => :integer, :default => (ENV["METRICS_PORT"] || 9394).to_i
+    opt :metrics_port, "Port to expose the metrics endpoint on, 0 to disable metrics",
+        :type => :integer, :default => (ENV["METRICS_PORT"] || 9394).to_i
   end
 
   opts
 end
 
+# Params for single-source mode and multi-source mode are mutually exclusive
+def check_mode(opts)
+  if opts[:config].nil?
+    Optimist::die :host, "can't be nil" if opts[:host].nil?
+    Optimist::die :token, "can't be nil" if opts[:token].nil?
+  else
+    Optimist::die :config, "not applicable in single-source mode" if opts[:host].present? || opts[:token].present?
+  end
+end
+
 args = parse_args
+
+check_mode(args)
 
 ingress_api_uri = URI(args[:ingress_api])
 
@@ -38,8 +55,14 @@ TopologicalInventoryIngressApiClient.configure.host   = "#{ingress_api_uri.host}
 
 begin
   metrics = TopologicalInventory::Openshift::Collector::ApplicationMetrics.new(args[:metrics_port])
-  collector = TopologicalInventory::Openshift::Collector.new(args[:source], args[:host], args[:port], args[:token], metrics)
-  collector.collect!
+  if args[:config].nil?
+    collector = TopologicalInventory::Openshift::Collector.new(args[:source], args[:host], args[:port], args[:token], metrics)
+    collector.collect!
+  else
+    pool = TopologicalInventory::Openshift::CollectorsPool.new(args[:config], metrics)
+    pool.run!
+  end
 ensure
+  pool&.stop!
   metrics.stop_server
 end
