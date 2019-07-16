@@ -9,11 +9,12 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
     before do
       allow(ManageIQ::Messaging::Client).to receive(:open).and_return(client)
       allow(client).to receive(:close)
+      allow(subject).to receive(:logger).and_return(double('null_object').as_null_object)
     end
 
     it "calls subscribe_messages on the right queue" do
       operations_topic = "platform.topological-inventory.operations-openshift"
-      expect(client).to receive(:subscribe_messages)
+      expect(client).to receive(:subscribe_topic)
         .with(hash_including(:service => operations_topic))
       subject.run
     end

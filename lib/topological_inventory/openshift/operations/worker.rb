@@ -21,11 +21,9 @@ module TopologicalInventory
 
           logger.info("Topological Inventory Openshift Operations worker started...")
 
-          client.subscribe_messages(queue_opts) do |messages|
-            messages.each do |message|
-              process_message(message)
-              client.ack(message.ack_ref)
-            end
+          client.subscribe_topic(queue_opts) do |message|
+            process_message(message)
+            client.ack(message.ack_ref)
           end
         ensure
           client&.close
@@ -42,23 +40,27 @@ module TopologicalInventory
           processor.process
         rescue => err
           metrics.record_error
-          logger.error(err)
-          logger.error(err.backtrace.join("\n"))
+          logger.error("#{err}\n#{err.backtrace.join("\n")}")
+        end
+
+        def queue_name
+          "platform.topological-inventory.operations-openshift"
         end
 
         def queue_opts
           {
-            :auto_ack  => false,
-            :max_bytes => 50_000,
-            :service   => "platform.topological-inventory.operations-openshift"
+            :auto_ack    => false,
+            :max_bytes   => 50_000,
+            :service     => queue_name,
+            :persist_ref => "topological-inventory-operations-openshift"
           }
         end
 
         def default_messaging_opts
           {
             :protocol   => :Kafka,
-            :client_ref => "openshift-operations-worker",
-            :group_ref  => "openshift-operations-worker"
+            :client_ref => "topological-inventory-operations-openshift",
+            :group_ref  => "topological-inventory-operations-openshift"
           }
         end
       end
