@@ -14,7 +14,7 @@ def parse_args
     opt :config, "Sources configuration YAML file",
         :type => :string, :default => ENV["CONFIG"]
     opt :source, "Inventory Source UID",
-        :type => :string, :default => ENV["SOURCE_UID"], :required => ENV["SOURCE_UID"].nil?
+        :type => :string, :default => ENV["SOURCE_UID"]
     opt :scheme, "Protocol scheme for connecting to the Openshift master node, default: https",
         :type => :string, :default => (ENV["ENDPOINT_SCHEME"] || "https")
     opt :host, "IP address or hostname of the Openshift master node",
@@ -36,11 +36,13 @@ end
 
 # Params for single-source mode and multi-source mode are mutually exclusive
 def check_mode(opts)
+  single_source_args = %i[source host token]
   if opts[:config].nil?
-    Optimist::die :host, "can't be nil" if opts[:host].nil?
-    Optimist::die :token, "can't be nil" if opts[:token].nil?
+    single_source_args.each do |arg|
+      Optimist::die arg, "can't be nil" if opts[arg].nil?
+    end
   else
-    Optimist::die :config, "not applicable in single-source mode" if opts[:host].present? || opts[:token].present?
+    Optimist::die :config, "not applicable in single-source mode" if single_source_args.any? { |arg| opts[arg].present? }
   end
 end
 
