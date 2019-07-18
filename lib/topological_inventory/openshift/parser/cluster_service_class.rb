@@ -12,8 +12,11 @@ module TopologicalInventory::Openshift
 
       def parse_cluster_service_class(service_class)
         @icons_cache ||= Set.new
-        icon_class = (service_class.spec&.externalMetadata || {})["console.openshift.io/iconClass"]
-        @icons_cache << icon_class
+        icon_class = service_class.spec&.externalMetadata&.dig("console.openshift.io/iconClass")
+        if icon_class
+          service_offering_icon_reference = lazy_find(:service_offering_icons, :source_ref => icon_class)
+          @icons_cache << icon_class
+        end
 
         service_offering = collections.service_offerings.build(
           :source_ref            => service_class.spec.externalID,
@@ -25,7 +28,7 @@ module TopologicalInventory::Openshift
           :long_description      => service_class.spec&.externalMetadata&.longDescription,
           :distributor           => service_class.spec&.externalMetadata&.providerDisplayName,
           :support_url           => service_class.spec&.externalMetadata&.supportUrl,
-          :service_offering_icon => lazy_find(:service_offering_icons, :source_ref => icon_class)
+          :service_offering_icon => service_offering_icon_reference
         )
 
         parse_service_offering_tags(service_offering.source_ref, service_class.spec&.tags)
