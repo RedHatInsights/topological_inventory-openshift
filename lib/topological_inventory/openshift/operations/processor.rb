@@ -1,6 +1,7 @@
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/core/service_catalog_client"
 require "topological_inventory/openshift/operations/core/topology_api_client"
+require "topological_inventory/openshift/operations/source"
 
 module TopologicalInventory
   module Openshift
@@ -19,7 +20,16 @@ module TopologicalInventory
 
         def process
           logger.info("Processing #{model}##{method} [#{params}]...")
-          result = order_service(params)
+
+          result = if Operations.const_defined?(model)
+                     impl = Operations.const_get(model)
+                     raise "#{model}.#{method} is not implemented" unless impl.respond_to?(method)
+
+                     impl.send(method, params)
+                   else
+                     order_service(params)
+                   end
+
           logger.info("Processing #{model}##{method} [#{params}]...Complete")
 
           result
