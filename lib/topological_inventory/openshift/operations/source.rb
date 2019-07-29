@@ -3,12 +3,23 @@ require "sources-api-client"
 module TopologicalInventory
   module Openshift
     module Operations
-      module Source
+      class Source
+        include Logging
         STATUS_AVAILABLE, STATUS_UNAVAILABLE = %w[available unavailable].freeze
 
-        def self.availability_check(params)
+        attr_accessor :params, :source_id
+
+        def initialize(params = {})
+          @params    = params
+          @source_id = nil
+        end
+
+        def availability_check
           source_id = params["source_id"]
-          raise "Missing source_id for the availability_check request" unless source_id
+          unless source_id
+            logger.error("Missing source_id for the availability_check request")
+            return
+          end
 
           # Let's skip the request if it's older than a minute ago.
           if params["timestamp"]
@@ -23,11 +34,13 @@ module TopologicalInventory
           begin
             api_client.update_source(source_id, source)
           rescue SourcesApiClient::ApiError => e
-            puts "Failed to update Source id:#{source_id} - #{e}"
+            logger.error("Failed to update Source id:#{source_id} - #{e.message}")
           end
         end
 
-        def self.connection_check(api_client, source_id)
+        private
+
+        def connection_check(api_client, source_id)
           endpoints = api_client.list_source_endpoints(source_id)&.data || []
           endpoint = endpoints.find(&:default)
           return STATUS_UNAVAILABLE unless endpoint
@@ -43,8 +56,8 @@ module TopologicalInventory
           connection_manager.connect("openshift", :host => endpoint.host, :port => endpoint.port, :token => auth.password)
 
           STATUS_AVAILABLE
-        rescue SourcesApiClient::ApiError => e
-          puts "Failed to connect to Source id:#{source_id} - #{e}"
+        rescue => e
+          logger.error("Failed to connect to Source id:#{source_id} - #{e.message}")
           STATUS_UNAVAILABLE
         end
       end
