@@ -34,7 +34,7 @@ module TopologicalInventory
         attr_accessor :messaging_client_opts, :metrics
 
         def process_message(message)
-          model, method = (message.message || message.headers["message_type"]).split(".")
+          model, method = message.message.split(".")
 
           processor = Processor.new(model, method, message.payload, metrics)
           processor.process
