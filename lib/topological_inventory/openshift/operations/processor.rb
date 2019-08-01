@@ -21,14 +21,17 @@ module TopologicalInventory
         def process
           logger.info("Processing #{model}##{method} [#{params}]...")
 
-          result = if Operations.const_defined?(model)
-                     impl = Operations.const_get(model).new(params)
-                     raise "#{model}.#{method} is not implemented" unless impl.respond_to?(method)
+          if Operations.const_defined?(model)
+            impl = Operations.const_get(model).new(params)
+            unless impl.respond_to?(method)
+              logger.error("#{model}.#{method} is not implemented")
+              return
+            end
 
-                     impl.send(method)
-                   else
-                     order_service(params)
-                   end
+            result = impl.send(method)
+          else
+            result = order_service(params)
+          end
 
           logger.info("Processing #{model}##{method} [#{params}]...Complete")
 
