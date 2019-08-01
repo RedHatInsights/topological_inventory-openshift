@@ -7,10 +7,11 @@ module TopologicalInventory
         include Logging
         STATUS_AVAILABLE, STATUS_UNAVAILABLE = %w[available unavailable].freeze
 
-        attr_accessor :params, :source_id
+        attr_accessor :params, :context, :source_id
 
-        def initialize(params = {})
-          @params    = params
+        def initialize(params = {}, request_context = nil)
+          @params  = params
+          @context = request_context
           @source_id = nil
         end
 

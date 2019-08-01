@@ -22,7 +22,7 @@ module TopologicalInventory
           logger.info("Processing #{model}##{method} [#{params}]...")
 
           if Operations.const_defined?(model)
-            impl = Operations.const_get(model).new(params)
+            impl = Operations.const_get(model).new(params, identity)
             unless impl.respond_to?(method)
               logger.error("#{model}.#{method} is not implemented")
               return
