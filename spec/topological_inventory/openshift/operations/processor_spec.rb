@@ -110,7 +110,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
           :id                => service_instance.id.to_s,
           :url               => "#{base_url_path}service_instances/#{service_instance.id}"
         }
-      }.to_json
+      }
 
       thread = described_class.new("ServicePlan", "order", payload, metrics).process
       thread.join
