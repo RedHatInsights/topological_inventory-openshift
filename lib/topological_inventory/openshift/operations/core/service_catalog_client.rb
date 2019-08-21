@@ -31,7 +31,7 @@ module TopologicalInventory
             end
           end
 
-          def order_service_plan(plan_name, service_offering_name, additional_parameters)
+          def order_service(plan_name, service_offering_name, additional_parameters)
             payload = build_payload(plan_name, service_offering_name, additional_parameters)
             servicecatalog_connection.create_service_instance(payload)
           end

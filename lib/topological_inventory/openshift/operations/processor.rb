@@ -43,7 +43,7 @@ module TopologicalInventory
           catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, identity)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
-          service_instance = catalog_client.order_service_plan(
+          service_instance = catalog_client.order_service(
             service_plan.name, service_offering.name, order_params
           )
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
