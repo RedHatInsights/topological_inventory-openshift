@@ -30,12 +30,16 @@ module TopologicalInventory
         attr_accessor :identity, :model, :method, :metrics, :params
 
         def order_service(params)
-          task_id, service_plan_id, order_params = params.values_at("task_id", "service_plan_id", "order_params")
+          task_id, service_offering_id, service_plan_id, order_params = params.values_at("task_id", "service_offering_id", "service_plan_id", "order_params")
 
-          service_plan     = topology_api_client.show_service_plan(service_plan_id)
-          service_offering = topology_api_client.show_service_offering(service_plan.service_offering_id)
-          source_id        = service_plan.source_id
+          # @deprecated, ordering by service plan will be removed
+          if service_offering_id.nil? && service_plan_id.present?
+            service_plan = topology_api_client.show_service_plan(service_plan_id)
+            service_offering_id = service_plan.service_offering_id
+          end
+          service_offering = topology_api_client.show_service_offering(service_offering_id)
 
+          source_id        = service_offering.source_id
           catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, identity)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
