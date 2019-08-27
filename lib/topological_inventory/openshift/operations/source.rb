@@ -22,11 +22,6 @@ module TopologicalInventory
             return
           end
 
-          # Let's skip the request if it's older than a minute ago.
-          if params["timestamp"]
-            return if params["timestamp"] < (Time.now.utc - 1.minute)
-          end
-
           source = SourcesApiClient::Source.new
           source.availability_status = connection_check(source_id)
 
