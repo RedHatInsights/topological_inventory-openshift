@@ -87,14 +87,14 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
         TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
       ).to receive(:new).with(source.id, task.id.to_s, identity).and_return(service_catalog_client)
 
-      allow(service_catalog_client).to receive(:order_service_plan).and_return(service_instance)
+      allow(service_catalog_client).to receive(:order_service).and_return(service_instance)
       allow(service_catalog_client).to receive(:wait_for_provision_complete).and_return([service_instance, reason, message])
 
       stub_request(:patch, task_url).with(:headers => headers)
     end
 
     it "orders the service via the service catalog client" do
-      expect(service_catalog_client).to receive(:order_service_plan).with("plan_name", "service_offering", "order_params")
+      expect(service_catalog_client).to receive(:order_service).with("plan_name", "service_offering", "order_params")
       expect(service_catalog_client).to receive(:wait_for_provision_complete).with(service_instance.metadata.name, service_instance.metadata.namespace)
       thread = described_class.new("ServicePlan", "order", payload, metrics).process
       thread.join

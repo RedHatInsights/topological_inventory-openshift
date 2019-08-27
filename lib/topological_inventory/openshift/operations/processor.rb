@@ -1,6 +1,7 @@
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/core/service_catalog_client"
 require "topological_inventory/openshift/operations/core/topology_api_client"
+require "topological_inventory/openshift/operations/source"
 
 module TopologicalInventory
   module Openshift
@@ -19,7 +20,19 @@ module TopologicalInventory
 
         def process
           logger.info("Processing #{model}##{method} [#{params}]...")
-          result = order_service(params)
+
+          if Operations.const_defined?(model)
+            impl = Operations.const_get(model).new(params, identity)
+            unless impl.respond_to?(method)
+              logger.error("#{model}.#{method} is not implemented")
+              return
+            end
+
+            result = impl.send(method)
+          else
+            result = order_service(params)
+          end
+
           logger.info("Processing #{model}##{method} [#{params}]...Complete")
 
           result
@@ -30,16 +43,20 @@ module TopologicalInventory
         attr_accessor :identity, :model, :method, :metrics, :params
 
         def order_service(params)
-          task_id, service_plan_id, order_params = params.values_at("task_id", "service_plan_id", "order_params")
+          task_id, service_offering_id, service_plan_id, order_params = params.values_at("task_id", "service_offering_id", "service_plan_id", "order_params")
 
-          service_plan     = topology_api_client.show_service_plan(service_plan_id)
-          service_offering = topology_api_client.show_service_offering(service_plan.service_offering_id)
-          source_id        = service_plan.source_id
+          # @deprecated, ordering by service plan will be removed
+          if service_offering_id.nil? && service_plan_id.present?
+            service_plan = topology_api_client.show_service_plan(service_plan_id)
+            service_offering_id = service_plan.service_offering_id
+          end
+          service_offering = topology_api_client.show_service_offering(service_offering_id)
 
+          source_id        = service_offering.source_id
           catalog_client = Core::ServiceCatalogClient.new(source_id, task_id, identity)
 
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...")
-          service_instance = catalog_client.order_service_plan(
+          service_instance = catalog_client.order_service(
             service_plan.name, service_offering.name, order_params
           )
           logger.info("Ordering #{service_offering.name} #{service_plan.name}...Complete")
