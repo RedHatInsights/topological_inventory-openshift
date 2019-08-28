@@ -7,12 +7,12 @@ module TopologicalInventory
         include Logging
         STATUS_AVAILABLE, STATUS_UNAVAILABLE = %w[available unavailable].freeze
 
-        attr_accessor :params, :context, :metrics, :source_id
+        attr_accessor :params, :identity, :metrics, :source_id
 
-        def initialize(params = {}, request_context = nil, metrics = nil)
-          @params  = params
-          @context = request_context
-          @metrics = metrics
+        def initialize(params = {}, identity = nil, metrics = nil)
+          @params   = params
+          @identity = identity
+          @metrics  = metrics
           @source_id = nil
         end
 
@@ -44,7 +44,7 @@ module TopologicalInventory
           return STATUS_UNAVAILABLE if endpoint_authentications.empty?
 
           auth_id = endpoint_authentications.first.id
-          auth = Core::AuthenticationRetriever.new(auth_id, identity).process
+          auth = Core::AuthenticationRetriever.new(auth_id, request_identity).process
           return STATUS_UNAVAILABLE unless auth
 
           connection_manager = TopologicalInventory::Openshift::Connection.new
@@ -56,14 +56,14 @@ module TopologicalInventory
           STATUS_UNAVAILABLE
         end
 
-        def identity
-          @identity ||= { "x-rh-identity" => Base64.strict_encode64({ "identity" => { "account_number" => params["external_tenant"] }}.to_json) }
+        def request_identity
+          @request_identity ||= { "x-rh-identity" => Base64.strict_encode64({ "identity" => { "account_number" => params["external_tenant"] }}.to_json) }
         end
 
         def api_client
           @api_client ||= begin
             api_client = SourcesApiClient::ApiClient.new
-            api_client.default_headers.merge!(identity)
+            api_client.default_headers.merge!(request_identity)
             SourcesApiClient::DefaultApi.new(api_client)
           end
         end
