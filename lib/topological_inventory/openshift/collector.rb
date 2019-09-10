@@ -1,13 +1,12 @@
 require "concurrent"
-require "topological_inventory-ingress_api-client/collector"
+require "topological_inventory/providers/common/collector"
 require "topological_inventory/openshift"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/parser"
-require "topological_inventory-ingress_api-client"
 
 module TopologicalInventory::Openshift
-  class Collector < TopologicalInventoryIngressApiClient::Collector
+  class Collector < TopologicalInventory::Providers::Common::Collector
     include Logging
 
     def initialize(source, openshift_host, openshift_port, openshift_token, metrics, default_limit: 500, poll_time: 30)
