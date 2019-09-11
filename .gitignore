@@ -26,8 +26,9 @@ build/
 /doc/
 /rdoc/
 
-## RubyMine
-/.idea/
+# Mounted by orchestrator
+/config/custom.yml
+/secret/credentials
 
 ## Environment normalization:
 /.bundle/
