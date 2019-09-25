@@ -80,7 +80,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
       expect { collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid) }.to(
-        raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
+        raise_error(TopologicalInventory::Providers::Common::SaveInventory::Exception::EntityTooLarge)
       )
     end
 
@@ -93,7 +93,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
       expect { collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid) }.to(
-        raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
+        raise_error(TopologicalInventory::Providers::Common::SaveInventory::Exception::EntityTooLarge)
       )
     end
 
@@ -107,7 +107,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       expect(client).to receive(:save_inventory_with_http_info).exactly(1).times
 
       expect { collector.send(:save_inventory, parser.collections.values, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, refresh_state_part_uuid) }.to(
-        raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
+        raise_error(TopologicalInventory::Providers::Common::SaveInventory::Exception::EntityTooLarge)
       )
     end
   end
@@ -143,7 +143,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       sweep_scope = {:container_groups => [{:source_ref => "a" * 1_000_002 * multiplier}]}
 
       expect { collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, 1, sweep_scope) }.to(
-        raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
+        raise_error(TopologicalInventory::Providers::Common::SaveInventory::Exception::EntityTooLarge)
       )
     end
 
@@ -154,7 +154,7 @@ RSpec.describe TopologicalInventory::Openshift::Collector do
       sweep_scope = {:container_groups => (0..1001 * multiplier).map { {:source_ref => "a" * 1_000} } }
 
       expect { collector.send(:sweep_inventory, collector.send(:inventory_name), collector.send(:schema_name), refresh_state_uuid, 1, sweep_scope) }.to(
-        raise_error(TopologicalInventoryIngressApiClient::SaveInventory::Exception::EntityTooLarge)
+        raise_error(TopologicalInventory::Providers::Common::SaveInventory::Exception::EntityTooLarge)
       )
     end
   end

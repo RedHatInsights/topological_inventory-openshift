@@ -1,20 +1,19 @@
-require "active_support/inflector"
+require "topological_inventory/providers/common/collector/parser"
 require "more_core_extensions/core_ext/string/iec60027_2"
 require "more_core_extensions/core_ext/string/decimal_suffix"
-require "topological_inventory/openshift"
-require "topological_inventory/openshift/parser/image"
-require "topological_inventory/openshift/parser/pod"
-require "topological_inventory/openshift/parser/namespace"
-require "topological_inventory/openshift/parser/node"
-require "topological_inventory/openshift/parser/resource_quota"
-require "topological_inventory/openshift/parser/template"
-require "topological_inventory/openshift/parser/cluster_service_class"
-require "topological_inventory/openshift/parser/cluster_service_plan"
-require "topological_inventory/openshift/parser/service_instance"
-require "topological_inventory-ingress_api-client"
 
 module TopologicalInventory::Openshift
-  class Parser
+  class Parser < TopologicalInventory::Providers::Common::Collector::Parser
+    require "topological_inventory/openshift/parser/image"
+    require "topological_inventory/openshift/parser/pod"
+    require "topological_inventory/openshift/parser/namespace"
+    require "topological_inventory/openshift/parser/node"
+    require "topological_inventory/openshift/parser/resource_quota"
+    require "topological_inventory/openshift/parser/template"
+    require "topological_inventory/openshift/parser/cluster_service_class"
+    require "topological_inventory/openshift/parser/cluster_service_plan"
+    require "topological_inventory/openshift/parser/service_instance"
+
     include Image
     include Pod
     include Namespace
@@ -25,11 +24,10 @@ module TopologicalInventory::Openshift
     include ClusterServicePlan
     include ServiceInstance
 
-    attr_accessor :collections, :resource_timestamp, :openshift_host, :openshift_port
+    attr_accessor :openshift_host, :openshift_port
 
     def initialize(openshift_host:, openshift_port: 8443)
-      self.resource_timestamp = Time.now.utc
-      self.collections = TopologicalInventoryIngressApiClient::Collector::InventoryCollectionStorage.new
+      super()
       self.openshift_host = openshift_host
       self.openshift_port = openshift_port
     end
@@ -49,14 +47,6 @@ module TopologicalInventory::Openshift
     def archive_entity(inventory_object, entity)
       source_deleted_at = entity.metadata&.deletionTimestamp || Time.now.utc
       inventory_object.source_deleted_at = source_deleted_at
-    end
-
-    def lazy_find(collection, reference, ref: :manager_ref)
-      TopologicalInventoryIngressApiClient::InventoryObjectLazy.new(
-        :inventory_collection_name => collection,
-        :reference                 => reference,
-        :ref                       => ref,
-      )
     end
 
     def lazy_find_namespace(name)

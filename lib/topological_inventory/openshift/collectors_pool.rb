@@ -1,9 +1,9 @@
-require "topological_inventory-ingress_api-client/collectors_pool"
+require "topological_inventory/providers/common/collectors_pool"
 require "topological_inventory/openshift/collector"
 require "topological_inventory/openshift/logging"
 
 module TopologicalInventory::Openshift
-  class CollectorsPool < TopologicalInventoryIngressApiClient::CollectorsPool
+  class CollectorsPool < TopologicalInventory::Providers::Common::CollectorsPool
     include Logging
 
     def path_to_config
