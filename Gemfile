@@ -6,6 +6,7 @@ require File.join(Bundler::Plugin.index.load_paths("bundler-inject")[0], "bundle
 gem "activesupport", "~> 5.2.2"
 gem "cloudwatchlogger", "~> 0.2"
 gem "concurrent-ruby"
+gem "http", "~> 4.1.1"
 gem "more_core_extensions"
 gem "optimist"
 gem "prometheus_exporter", "~> 0.4.5"
