@@ -6,7 +6,7 @@ RSpec.describe(TopologicalInventory::Openshift::Operations::Source) do
     let(:host_url) { "https://cloud.redhat.com" }
     let(:external_tenant) { "11001" }
     let(:identity) do
-      { "x-rh-identity" => Base64.strict_encode64({ "identity" => { "account_number" => external_tenant } }.to_json) }
+      { "x-rh-identity" => Base64.strict_encode64({ "identity" => { "account_number" => external_tenant, "user" => { "is_org_admin" => true } } }.to_json) }
     end
     let(:headers) { {"Content-Type" => "application/json"}.merge(identity) }
 
