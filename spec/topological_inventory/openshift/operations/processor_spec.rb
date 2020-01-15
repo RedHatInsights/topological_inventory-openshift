@@ -39,7 +39,7 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
     end
 
     let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
-    let(:base_url_path) { "https://cloud.redhat.com/api/topological-inventory/v1.0/" }
+    let(:base_url_path) { "https://cloud.redhat.com/api/topological-inventory/v2.0/" }
     let(:service_plan_url) { URI.join(base_url_path, "service_plans/#{service_plan.id}").to_s }
     let(:source_url) { URI.join(base_url_path, "sources/#{source.id}").to_s }
     let(:service_offering_url) { URI.join(base_url_path, "service_offerings/#{service_offering.id}").to_s }
