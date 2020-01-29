@@ -19,6 +19,7 @@ module TopologicalInventory::Openshift
       self.openshift_host    = openshift_host
       self.openshift_port    = openshift_port
       self.openshift_token   = openshift_token
+      self.watchers          = Concurrent::Array.new
     end
 
     def collect!
@@ -46,10 +47,16 @@ module TopologicalInventory::Openshift
       end
     end
 
+    def stop
+      watchers.each(&:finish)
+      finished.value = true
+    end
+
     private
 
     attr_accessor :connection_manager,
-                  :metrics, :openshift_host, :openshift_token, :openshift_port
+                  :metrics, :openshift_host, :openshift_token, :openshift_port,
+                  :watchers
 
 
     def start_collector_thread(entity_type)
@@ -78,7 +85,9 @@ module TopologicalInventory::Openshift
     end
 
     def watch(connection, entity_type, resource_version)
-      connection.send("watch_#{entity_type}", :resource_version => resource_version).each { |notice| yield notice }
+      watcher = connection.send("watch_#{entity_type}", :resource_version => resource_version)
+      watchers << watcher
+      watcher.each { |notice| yield notice }
     end
 
     def full_refresh(connection, entity_type)
