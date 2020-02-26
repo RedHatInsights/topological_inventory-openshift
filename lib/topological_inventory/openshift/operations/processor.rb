@@ -1,4 +1,6 @@
 require "topological_inventory/openshift/logging"
+require "topological_inventory-api-client"
+require "topological_inventory/openshift/operations/core/topology_api_client"
 require "topological_inventory/openshift/operations/service_plan"
 require "topological_inventory/openshift/operations/source"
 
@@ -17,22 +19,32 @@ module TopologicalInventory
         end
 
         def process
-          logger.info("Processing #{model}##{method} [#{params}]...")
+          logger.info(status_log_msg)
 
-          if Operations.const_defined?(model)
-            impl = Operations.const_get(model).new(params, identity, metrics)
-            if impl.respond_to?(method)
-              result = impl.send(method)
-              logger.info("Processing #{model}##{method} [#{params}]...Complete")
-              return result
+          impl = "#{Operations}::#{model}".safe_constantize&.new(params, identity, metrics)
+          if impl&.respond_to?(method)
+            result = impl&.send(method)
+
+            logger.info(status_log_msg("Complete"))
+            result
+          else
+            logger.warn(status_log_msg("Not Implemented!"))
+            if params['task_id']
+              update_task(params['task_id'],
+                          :state   => "completed",
+                          :status  => "error",
+                          :context => {:error => "#{model}##{method} not implemented"})
             end
           end
-          logger.error("#{model}.#{method} is not implemented")
         end
 
         private
 
         attr_accessor :identity, :model, :method, :metrics, :params
+
+        def status_log_msg(status = nil)
+          "Processing #{model}##{method} [#{params}]...#{status}"
+        end
       end
     end
   end
