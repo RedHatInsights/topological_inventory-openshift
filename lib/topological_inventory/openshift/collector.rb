@@ -93,7 +93,7 @@ module TopologicalInventory::Openshift
     def full_refresh(connection, entity_type)
       resource_version = continue = nil
 
-      refresh_state_uuid = SecureRandom.uuid
+      refresh_state_uuid, refresh_state_started_at = SecureRandom.uuid, Time.now.utc
       logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
       total_parts = 0
@@ -102,6 +102,8 @@ module TopologicalInventory::Openshift
         entities = connection.send("get_#{entity_type}", :limit => limits[entity_type], :continue => continue)
         break if entities.nil?
 
+        refresh_state_part_collected_at = Time.now.utc
+
         continue         = entities.continue
         resource_version = entities.resourceVersion
 
@@ -109,7 +111,7 @@ module TopologicalInventory::Openshift
         parser.send("parse_#{entity_type}", entities)
 
         refresh_state_part_uuid = SecureRandom.uuid
-        total_parts += save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid)
+        total_parts += save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid, refresh_state_part_collected_at)
         sweep_scope.merge(parser.collections.values.map(&:name))
 
         break if entities.last?
@@ -120,7 +122,7 @@ module TopologicalInventory::Openshift
       sweep_scope = sweep_scope.to_a
       logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
 
-      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, sweep_scope)
+      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, sweep_scope, refresh_state_started_at)
 
       logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
       resource_version
