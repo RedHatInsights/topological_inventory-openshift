@@ -31,6 +31,7 @@ module TopologicalInventory
           rescue SourcesApiClient::ApiError => e
             logger.error("Failed to update Source id:#{source_id} - #{e.message}")
           end
+          logger.info("Source#availability_check completed: Source #{source_id} is #{source.availability_status}")
         end
 
         private
