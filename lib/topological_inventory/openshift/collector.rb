@@ -79,25 +79,21 @@ module TopologicalInventory::Openshift
         logger.info("#{entity_type} #{notice.object.metadata.name} was #{notice.type.downcase}")
         queue.push(notice)
       end
-    rescue StandardError => err
-      logger.error("Error collecting entity type '#{entity_type}': #{err}")
-      logger.error(err)
     end
 
     def watch(connection, entity_type, resource_version)
       watcher = connection.send("watch_#{entity_type}", :resource_version => resource_version)
       watchers << watcher
       watcher.each { |notice| yield notice }
+    rescue StandardError => err
+      logger.error("[ERROR] Watching #{entity_type}, :source_uid => #{source}, :message => #{err.message}\n#{err.backtrace.join("\n")}")
     end
 
     def full_refresh(connection, entity_type)
-      resource_version = continue = nil
+      refresh_state_uuid, refresh_state_started_at, refresh_state_part_collected_at = SecureRandom.uuid, Time.now.utc, nil
+      logger.collecting(:start, source, entity_type, refresh_state_uuid)
 
-      refresh_state_uuid, refresh_state_started_at = SecureRandom.uuid, Time.now.utc
-      logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
-
-      total_parts = 0
-      sweep_scope = Set.new
+      continue, resource_version, total_parts, sweep_scope = nil, nil, 0, Set.new
       loop do
         entities = connection.send("get_#{entity_type}", :limit => limits[entity_type], :continue => continue)
         break if entities.nil?
@@ -116,16 +112,17 @@ module TopologicalInventory::Openshift
 
         break if entities.last?
       end
-
-      logger.info("Collecting #{entity_type} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete - Parts [#{total_parts}]")
+      logger.collecting(:finish, source, entity_type, refresh_state_uuid, total_parts)
 
       sweep_scope = sweep_scope.to_a
-      logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...")
-
+      logger.sweeping(:start, source, sweep_scope, refresh_state_uuid)
       sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, sweep_scope, refresh_state_started_at)
-
-      logger.info("Sweeping inactive records for #{sweep_scope} with :refresh_state_uuid => '#{refresh_state_uuid}'...Complete")
+      logger.sweeping(:finish, source, sweep_scope, refresh_state_uuid)
       resource_version
+    rescue => e
+      metrics.record_error
+      logger.collecting_error(source, entity_type, refresh_state_uuid, e)
+      nil
     end
 
     def targeted_refresh(notices)

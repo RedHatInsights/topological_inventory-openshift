@@ -1,4 +1,4 @@
-require "manageiq/loggers"
+require "topological_inventory/providers/common/logging"
 
 module TopologicalInventory
   module Openshift
@@ -7,7 +7,7 @@ module TopologicalInventory
     end
 
     def self.logger
-      @logger ||= ManageIQ::Loggers::CloudWatch.new
+      @logger ||= TopologicalInventory::Providers::Common::Logger.new
     end
 
     module Logging
