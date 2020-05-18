@@ -10,7 +10,7 @@ gem "http", "~> 4.1.1"
 gem "more_core_extensions"
 gem "optimist"
 gem "prometheus_exporter", "~> 0.4.5"
-gem "rake"
+gem "rake", ">= 12.3.3"
 
 gem "kubeclient", :git => "https://github.com/abonas/kubeclient", :branch => "master"
 gem "manageiq-loggers", "~> 0.4.0", ">= 0.4.2"
