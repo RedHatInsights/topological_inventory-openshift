@@ -3,7 +3,7 @@ source 'https://rubygems.org'
 plugin 'bundler-inject', '~> 1.1'
 require File.join(Bundler::Plugin.index.load_paths("bundler-inject")[0], "bundler-inject") rescue nil
 
-gem "activesupport", "~> 5.2.2"
+gem "activesupport", '~> 5.2.4.3'
 gem "cloudwatchlogger", "~> 0.2"
 gem "concurrent-ruby"
 gem "http", "~> 4.1.1"
