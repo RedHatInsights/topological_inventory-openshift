@@ -3,7 +3,7 @@ source 'https://rubygems.org'
 plugin 'bundler-inject', '~> 1.1'
 require File.join(Bundler::Plugin.index.load_paths("bundler-inject")[0], "bundler-inject") rescue nil
 
-gem "activesupport", "~> 5.2.2"
+gem "activesupport", '~> 5.2.4.3'
 gem "cloudwatchlogger", "~> 0.2"
 gem "concurrent-ruby"
 gem "http", "~> 4.1.1"
@@ -22,6 +22,8 @@ gem "topological_inventory-providers-common", "~> 0.1"
 
 group :development, :test do
   gem "rspec"
-  gem "simplecov"
+  gem 'rubocop',             "~>0.69.0", :require => false
+  gem 'rubocop-performance', "~>1.3",    :require => false
+  gem "simplecov",           "~>0.17.1"
   gem "webmock"
 end
