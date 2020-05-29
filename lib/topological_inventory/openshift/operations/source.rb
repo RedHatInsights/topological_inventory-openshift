@@ -1,72 +1,35 @@
-require "sources-api-client"
+require "topological_inventory/openshift/logging"
+require "topological_inventory/providers/common/operations/source"
+require "topological_inventory/openshift/connection"
 
 module TopologicalInventory
   module Openshift
     module Operations
-      class Source
+      class Source < TopologicalInventory::Common::Operations::Source
         include Logging
-        STATUS_AVAILABLE, STATUS_UNAVAILABLE = %w[available unavailable].freeze
 
-        attr_accessor :params, :identity, :metrics, :source_id
+        attr_accessor :metrics
 
-        def initialize(params = {}, identity = nil, metrics = nil)
-          @params   = params
-          @identity = identity
-          @metrics  = metrics
-          @source_id = nil
-        end
-
-        def availability_check
-          source_id = params["source_id"]
-          unless source_id
-            logger.error("Missing source_id for the availability_check request")
-            return
-          end
-
-          source = SourcesApiClient::Source.new
-          source.availability_status = connection_check(source_id)
-
-          begin
-            api_client.update_source(source_id, source)
-          rescue SourcesApiClient::ApiError => e
-            logger.error("Failed to update Source id:#{source_id} - #{e.message}")
-          end
-          logger.info("Source#availability_check completed: Source #{source_id} is #{source.availability_status}")
+        def initialize(params = {}, request_context = nil, metrics = nil)
+          super(params, request_context)
+          self.metrics  = metrics
         end
 
         private
 
+        def required_params
+          %w[source_id]
+        end
+
         def connection_check(source_id)
-          endpoints = api_client.list_source_endpoints(source_id)&.data || []
-          endpoint = endpoints.find(&:default)
-          return STATUS_UNAVAILABLE unless endpoint
-
-          endpoint_authentications = api_client.list_endpoint_authentications(endpoint.id.to_s).data || []
-          return STATUS_UNAVAILABLE if endpoint_authentications.empty?
-
-          auth_id = endpoint_authentications.first.id
-          auth = Core::AuthenticationRetriever.new(auth_id, request_identity).process
-          return STATUS_UNAVAILABLE unless auth
-
+          check_time
           connection_manager = TopologicalInventory::Openshift::Connection.new
-          connection_manager.connect("openshift", :host => endpoint.host, :port => endpoint.port, :token => auth.password)
+          connection_manager.connect("openshift", :host => endpoint.host, :port => endpoint.port, :token => authentication.password)
 
-          STATUS_AVAILABLE
+          [STATUS_AVAILABLE, nil]
         rescue => e
-          logger.error("Failed to connect to Source id:#{source_id} - #{e.message}")
-          STATUS_UNAVAILABLE
-        end
-
-        def request_identity
-          @request_identity ||= { "x-rh-identity" => Base64.strict_encode64({ "identity" => { "account_number" => params["external_tenant"], "user" => { "is_org_admin" => true }}}.to_json) }
-        end
-
-        def api_client
-          @api_client ||= begin
-            api_client = SourcesApiClient::ApiClient.new
-            api_client.default_headers.merge!(request_identity)
-            SourcesApiClient::DefaultApi.new(api_client)
-          end
+          logger.error("Source#availability_check - Failed to connect to Source id:#{source_id} - #{e.message}")
+          [STATUS_UNAVAILABLE, e.message]
         end
       end
     end
