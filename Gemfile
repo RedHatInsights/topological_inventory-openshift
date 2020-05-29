@@ -16,7 +16,7 @@ gem "kubeclient", :git => "https://github.com/abonas/kubeclient", :branch => "ma
 gem "manageiq-loggers", "~> 0.5.0"
 gem "manageiq-messaging", "~> 0.1.2"
 gem "sources-api-client", "~> 1.0"
-gem 'topological_inventory-api-client',         "~> 2.0"
+gem 'topological_inventory-api-client',         "~> 3.0"
 gem "topological_inventory-ingress_api-client", "~> 1.0.1"
 gem "topological_inventory-providers-common", "~> 1.0.2"
 
