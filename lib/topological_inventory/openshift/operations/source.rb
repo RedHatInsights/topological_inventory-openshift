@@ -5,7 +5,7 @@ require "topological_inventory/openshift/connection"
 module TopologicalInventory
   module Openshift
     module Operations
-      class Source < TopologicalInventory::Common::Operations::Source
+      class Source < TopologicalInventory::Providers::Common::Operations::Source
         include Logging
 
         attr_accessor :metrics
