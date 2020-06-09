@@ -12,23 +12,18 @@ module TopologicalInventory
 
         def initialize(params = {}, request_context = nil, metrics = nil)
           super(params, request_context)
-          self.metrics  = metrics
+          self.metrics = metrics
         end
 
         private
 
-        def required_params
-          %w[source_id]
-        end
-
         def connection_check(source_id)
-          check_time
           connection_manager = TopologicalInventory::Openshift::Connection.new
           connection_manager.connect("openshift", :host => endpoint.host, :port => endpoint.port, :token => authentication.password)
 
           [STATUS_AVAILABLE, nil]
         rescue => e
-          logger.error("Source#availability_check - Failed to connect to Source id:#{source_id} - #{e.message}")
+          logger.availability_check("Failed to connect to Source id:#{source_id} - #{e.message}", :error)
           [STATUS_UNAVAILABLE, e.message]
         end
       end
