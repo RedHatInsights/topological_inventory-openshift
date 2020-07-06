@@ -17,7 +17,7 @@ module TopologicalInventory
 
         private
 
-        def connection_check(source_id)
+        def connection_check
           connection_manager = TopologicalInventory::Openshift::Connection.new
           connection_manager.connect("openshift", :host => endpoint.host, :port => endpoint.port, :token => authentication.password)
 
