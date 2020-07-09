@@ -18,7 +18,7 @@ gem "manageiq-messaging", "~> 0.1.5"
 gem "sources-api-client", "~> 3.0"
 gem 'topological_inventory-api-client',         "~> 3.0"
 gem "topological_inventory-ingress_api-client", "~> 1.0.1"
-gem "topological_inventory-providers-common", "~> 1.0.5"
+gem "topological_inventory-providers-common", "~> 1.0.6"
 
 group :development, :test do
   gem "rspec"
