@@ -138,9 +138,9 @@ module TopologicalInventory::Openshift
 
       refresh_state_uuid      = SecureRandom.uuid
       refresh_state_part_uuid = SecureRandom.uuid
-      total_parts = save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid)
+      total_parts = save_inventory(parser.collections.values, inventory_name, schema_name, refresh_state_uuid, refresh_state_part_uuid, Time.now.utc, Time.now.utc, 'targeted-refresh')
 
-      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, parse_targeted_sweep_scope(parser.collections.values))
+      sweep_inventory(inventory_name, schema_name, refresh_state_uuid, total_parts, parse_targeted_sweep_scope(parser.collections.values), Time.now.utc, Time.now.utc, 'targeted-refresh')
     end
 
     def parse_targeted_sweep_scope(collections)
