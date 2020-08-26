@@ -3,6 +3,7 @@ require "sources-api-client"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/operations/processor"
 require "topological_inventory-api-client"
+require "topological_inventory/providers/common/operations/health_check"
 
 module TopologicalInventory
   module Openshift
@@ -24,6 +25,7 @@ module TopologicalInventory
           client.subscribe_topic(queue_opts) do |message|
             process_message(message)
             client.ack(message.ack_ref)
+            TopologicalInventory::Providers::Common::Operations::HealthCheck.touch_file
           end
         ensure
           client&.close
