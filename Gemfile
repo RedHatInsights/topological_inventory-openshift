@@ -14,7 +14,7 @@ gem "rake", ">= 12.3.3"
 
 gem "kubeclient", :git => "https://github.com/abonas/kubeclient", :branch => "master"
 gem "manageiq-loggers", "~> 0.5.0"
-gem "manageiq-messaging", "~> 0.1.5"
+gem "manageiq-messaging", "~> 1.0.0"
 gem "sources-api-client", "~> 3.0"
 gem 'topological_inventory-api-client',         "~> 3.0"
 gem "topological_inventory-ingress_api-client", "~> 1.0.1"
