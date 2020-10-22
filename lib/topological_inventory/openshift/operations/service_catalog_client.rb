@@ -2,16 +2,16 @@ require 'more_core_extensions/core_ext/hash'
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/connection"
 require "topological_inventory/openshift/operations/core/authentication_retriever"
-require "topological_inventory/openshift/operations/core/topology_api_client"
-require "topological_inventory-api-client"
+require "topological_inventory/providers/common/mixins/sources_api"
+require "topological_inventory/providers/common/mixins/topology_api"
 
 module TopologicalInventory
   module Openshift
     module Operations
-      module Core
         class ServiceCatalogClient
           include Logging
-          include TopologyApiClient
+          include TopologicalInventory::Providers::Common::Mixins::SourcesApi
+          include TopologicalInventory::Providers::Common::Mixins::TopologyApi
 
           attr_accessor :connection_manager, :source_id, :task_id, :identity
 
@@ -21,14 +21,6 @@ module TopologicalInventory
             self.task_id    = task_id
 
             self.connection_manager = TopologicalInventory::Openshift::Connection.new
-          end
-
-          def sources_api_client
-            @sources_api_client ||= begin
-              api_client = SourcesApiClient::ApiClient.new
-              api_client.default_headers.merge!(identity) if identity.present?
-              SourcesApiClient::DefaultApi.new(api_client)
-            end
           end
 
           def order_service(plan_name, service_offering_name, additional_parameters)
@@ -52,14 +44,6 @@ module TopologicalInventory
               service_instance = servicecatalog_connection.get_service_instance(name, namespace)
               return service_instance, event.reason, event.message
             end
-          end
-
-          def authentication
-            @authentication ||= fetch_authentication
-          end
-
-          def default_endpoint
-            @default_endpoint ||= fetch_default_endpoint
           end
 
           private
@@ -92,37 +76,16 @@ module TopologicalInventory
           end
 
           def raw_connect(service)
-            raise "Unable to find a default endpoint for source [#{source_id}]" if default_endpoint.nil?
+            raise "Unable to find a default endpoint for source [#{source_id}]" if endpoint.nil?
             raise "Unable to find an authentication for source [#{source_id}]"  if authentication.nil?
 
             Thread.current["#{service}_connection"] ||= begin
               connection_manager.connect(
-                service, :host => default_endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
+                service, :host => endpoint.host, :token => authentication.password, :verify_ssl => verify_ssl_mode
               )
             end
           end
-
-          def verify_ssl_mode
-            default_endpoint.verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
-          end
-
-          def fetch_default_endpoint
-            endpoints = sources_api_client.list_source_endpoints(source_id)&.data || []
-            endpoints.find(&:default)
-          end
-
-          def fetch_authentication
-            endpoint = default_endpoint
-            return if endpoint.nil?
-
-            endpoint_authentications = sources_api_client.list_endpoint_authentications(endpoint.id.to_s).data || []
-            return if endpoint_authentications.empty?
-
-            auth_id = endpoint_authentications.first.id
-            AuthenticationRetriever.new(auth_id, identity).process
-          end
         end
       end
-    end
   end
 end
