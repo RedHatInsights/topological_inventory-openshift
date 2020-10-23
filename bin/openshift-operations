@@ -4,7 +4,7 @@ $LOAD_PATH << File.expand_path("../lib", __dir__)
 require "bundler/setup"
 require "optimist"
 require "topological_inventory/openshift/operations/worker"
-require "topological_inventory/openshift/operations/application_metrics"
+require "topological_inventory/openshift/operations/metrics"
 
 def parse_args
   Optimist.options do
@@ -51,7 +51,7 @@ TopologicalInventory::Openshift::MessagingClient.configure do |config|
   config.queue_port = args[:queue_port]
 end
 
-metrics = TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(args[:metrics_port])
+metrics = TopologicalInventory::Openshift::Operations::Metrics.new(args[:metrics_port])
 operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(metrics)
 
 Signal.trap("TERM") do
