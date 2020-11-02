@@ -5,7 +5,6 @@ module TopologicalInventory
     module Operations
       class ServicePlan
         include Logging
-        include Core::TopologyApiClient
 
         attr_accessor :params, :identity, :metrics
 
