@@ -5,9 +5,6 @@ require "bundler/setup"
 require "topological_inventory/openshift/operations/worker"
 require "topological_inventory/openshift/operations/application_metrics"
 
-queue_host = ENV["QUEUE_HOST"] || "localhost"
-queue_port = ENV["QUEUE_PORT"] || 9092
-
 TopologicalInventoryApiClient.configure do |config|
   config.scheme = "http"
   config.host = "#{ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_HOST"]}:#{ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_PORT"]}"
@@ -21,8 +18,8 @@ end
 metrics_port = (ENV["METRICS_PORT"] || 9394).to_i
 
 TopologicalInventory::Openshift::MessagingClient.configure do |config|
-  config.queue_host = args[:queue_host]
-  config.queue_port = args[:queue_port]
+  config.queue_host = ENV["QUEUE_HOST"] || "localhost"
+  config.queue_port = (ENV['QUEUE_PORT'] || 9092).to_i
 end
 
 begin
