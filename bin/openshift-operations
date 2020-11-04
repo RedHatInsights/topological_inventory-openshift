@@ -20,10 +20,18 @@ end
 
 metrics_port = (ENV["METRICS_PORT"] || 9394).to_i
 
+TopologicalInventory::Openshift::MessagingClient.configure do |config|
+  config.queue_host = args[:queue_host]
+  config.queue_port = args[:queue_port]
+end
+
 begin
   metrics = TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(metrics_port)
-  operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(metrics, :host => queue_host, :port => queue_port)
+  operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(:metrics => metrics)
   operations_worker.run
+rescue => err
+  puts err
+  raise
 ensure
   metrics.stop_server
 end
