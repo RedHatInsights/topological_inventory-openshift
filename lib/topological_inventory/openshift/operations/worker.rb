@@ -10,7 +10,7 @@ module TopologicalInventory
       class Worker
         include Logging
 
-        def initialize(metrics:)
+        def initialize(metrics)
           self.metrics = metrics
         end
 
