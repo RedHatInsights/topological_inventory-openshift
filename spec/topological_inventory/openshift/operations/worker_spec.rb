@@ -5,10 +5,11 @@ RSpec.describe TopologicalInventory::Openshift::Operations::Worker do
   describe "#run" do
     let(:client)  { double("ManageIQ::Messaging::Client") }
     let(:metrics) { double }
-    let(:subject) { described_class.new(metrics) }
+    let(:subject) { described_class.new(:metrics => metrics) }
     let(:message) { double }
     before do
-      allow(ManageIQ::Messaging::Client).to receive(:open).and_return(client)
+      TopologicalInventory::Openshift::MessagingClient.class_variable_set(:@@default, nil)
+      allow(subject).to receive(:client).and_return(client)
       allow(client).to receive(:close)
       allow(subject).to receive(:logger).and_return(double('null_object').as_null_object)
     end
