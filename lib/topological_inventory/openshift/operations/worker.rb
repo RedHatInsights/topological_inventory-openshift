@@ -1,9 +1,7 @@
 require "manageiq-messaging"
-require "sources-api-client"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/messaging_client"
 require "topological_inventory/openshift/operations/processor"
-require "topological_inventory-api-client"
 require "topological_inventory/providers/common/operations/health_check"
 
 module TopologicalInventory
@@ -12,7 +10,7 @@ module TopologicalInventory
       class Worker
         include Logging
 
-        def initialize(metrics:)
+        def initialize(metrics)
           self.metrics = metrics
         end
 

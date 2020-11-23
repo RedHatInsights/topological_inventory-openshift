@@ -1,6 +1,5 @@
 require "topological_inventory/openshift/logging"
-require "topological_inventory-api-client"
-require "topological_inventory/openshift/operations/core/topology_api_client"
+require "topological_inventory/providers/common/mixins/topology_api"
 require "topological_inventory/openshift/operations/service_plan"
 require "topological_inventory/openshift/operations/source"
 
@@ -9,6 +8,7 @@ module TopologicalInventory
     module Operations
       class Processor
         include Logging
+        include TopologicalInventory::Providers::Common::Mixins::TopologyApi
 
         def initialize(model, method, payload, metrics)
           self.model           = model
@@ -22,8 +22,8 @@ module TopologicalInventory
           logger.info(status_log_msg)
 
           impl = "#{Operations}::#{model}".safe_constantize&.new(params, identity, metrics)
-          if impl&.respond_to?(method)
-            result = impl&.send(method)
+          if impl.respond_to?(method)
+            result = impl.send(method)
 
             logger.info(status_log_msg("Complete"))
             result
