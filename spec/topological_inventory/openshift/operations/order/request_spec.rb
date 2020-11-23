@@ -1,7 +1,8 @@
 require "topological_inventory/openshift/operations/order/request"
+require "topological_inventory/openshift/operations/metrics"
 
 RSpec.describe TopologicalInventory::Openshift::Operations::Order::Request do
-  let(:metrics) { TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(0) }
+  let(:metrics) { TopologicalInventory::Openshift::Operations::Metrics.new(0) }
 
   describe "#run" do
     let(:task) { double("Task", :id => 1) }

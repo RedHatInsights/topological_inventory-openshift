@@ -2,6 +2,7 @@ require "manageiq-messaging"
 require "topological_inventory/openshift/logging"
 require "topological_inventory/openshift/messaging_client"
 require "topological_inventory/openshift/operations/processor"
+require "topological_inventory/providers/common/mixins/statuses"
 require "topological_inventory/providers/common/operations/health_check"
 
 module TopologicalInventory
@@ -9,6 +10,7 @@ module TopologicalInventory
     module Operations
       class Worker
         include Logging
+        include TopologicalInventory::Providers::Common::Mixins::Statuses
 
         def initialize(metrics)
           self.metrics = metrics
@@ -19,8 +21,6 @@ module TopologicalInventory
 
           client.subscribe_topic(queue_opts) do |message|
             process_message(message)
-            client.ack(message.ack_ref)
-            TopologicalInventory::Providers::Common::Operations::HealthCheck.touch_file
           end
         ensure
           client&.close
@@ -39,13 +39,14 @@ module TopologicalInventory
         end
 
         def process_message(message)
-          model, method = message.message.split(".")
-
-          processor = Processor.new(model, method, message.payload, metrics)
-          processor.process
-        rescue => err
-          metrics.record_error
-          logger.error("#{err}\n#{err.backtrace.join("\n")}")
+          result = Processor.process!(message, metrics)
+          metrics&.record_operation(message.message, :status => result)
+        rescue => e
+          logger.error("#{e}\n#{e.backtrace.join("\n")}")
+          metrics&.record_operation(message.message, :status => operation_status[:error])
+        ensure
+          message.ack
+          TopologicalInventory::Providers::Common::Operations::HealthCheck.touch_file
         end
       end
     end

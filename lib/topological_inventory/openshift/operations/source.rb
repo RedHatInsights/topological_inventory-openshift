@@ -8,13 +8,6 @@ module TopologicalInventory
       class Source < TopologicalInventory::Providers::Common::Operations::Source
         include Logging
 
-        attr_accessor :metrics
-
-        def initialize(params = {}, request_context = nil, metrics = nil)
-          super(params, request_context)
-          self.metrics = metrics
-        end
-
         private
 
         def connection_check
