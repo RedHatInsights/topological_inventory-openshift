@@ -1,145 +1,41 @@
 require "topological_inventory/openshift/operations/processor"
-require "topological_inventory/openshift/operations/application_metrics"
 
 RSpec.describe TopologicalInventory::Openshift::Operations::Processor do
-  let(:client)  { double(:client) }
-  let(:metrics) { TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(0) }
+  let(:message) { double("ManageIQ::Messaging::ReceivedMessage", :message => operation_name, :payload => payload) }
+  let(:operation_name) { 'Testing.operation' }
+  let(:params) { {'source_id' => 1, 'external_tenant' => '12345', 'task_id' => task_id} }
+  let(:payload) { {"params" => params, "request_context" => double('request_context')} }
+  let(:task_id) { '42' }
 
-  describe "#order_service (private)" do
-    let(:task) { double("Task", :id => 1) }
+  subject { described_class.new(message, nil) }
 
-    let(:service_plan) do
-      TopologicalInventoryApiClient::ServicePlan.new(:id                  => "123",
-                                                     :name                => "plan_name",
-                                                     :source_id           => source.id,
-                                                     :service_offering_id => service_offering.id)
-    end
-    let(:source) do
-      TopologicalInventoryApiClient::Source.new(:id => "321")
-    end
-    let(:service_offering) do
-      TopologicalInventoryApiClient::ServiceOffering.new(:id => "456", :name => "service_offering", :source_id => source.id)
-    end
+  describe "#process" do
+    context "ServicePlan.order task" do
+      let(:svc_plan_class) { TopologicalInventory::Openshift::Operations::ServicePlan }
+      let(:operation_name) { 'ServicePlan.order' }
 
-    let(:service_instance) do
-      TopologicalInventoryApiClient::ServiceInstance.new(:id => "789", :name => "service_instance", :source_ref => "af01c63c-e479-4190-8054-9c5ba2e9ec81")
-    end
+      it "orders service plan" do
+        service_plan = svc_plan_class.new(params)
+        allow(svc_plan_class).to receive(:new).and_return(service_plan)
 
-    let(:identity) { {"x-rh-identity"=>"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjI0MCJ9fQ==\n"} }
+        expect(service_plan).to receive(:order)
 
-    let(:payload) do
-      {
-        "request_context" => identity,
-        "params"          => {
-          "service_plan_id" => service_plan.id.to_s,
-          "order_params"    => "order_params",
-          "task_id"         => task.id.to_s,
-        }
-      }
+        subject.process
+      end
     end
 
-    let(:service_catalog_client) { instance_double("ServiceCatalogClient") }
-    let(:base_url_path) { "https://cloud.redhat.com/api/topological-inventory/v3.0/" }
-    let(:service_plan_url) { URI.join(base_url_path, "service_plans/#{service_plan.id}").to_s }
-    let(:source_url) { URI.join(base_url_path, "sources/#{source.id}").to_s }
-    let(:service_offering_url) { URI.join(base_url_path, "service_offerings/#{service_offering.id}").to_s }
-    let(:service_instances_url) { URI.join(base_url_path, "service_instances?source_id=#{source.id}&source_ref=#{service_instance.source_ref}") }
-    let(:task_url) { URI.join(base_url_path, "tasks/#{task.id}").to_s }
-    let(:headers) { {"Content-Type" => "application/json", "x-rh-identity"=>"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjI0MCJ9fQ==\n"} }
-    let(:reason) { "ProvisionedSuccessfully" }
-    let(:message) { "Message" }
-    let(:service_instance) do
-      Kubeclient::Resource.new(
-        :metadata => {
-          :name      => "my_service",
-          :namespace => "default",
-          :uid       => "af01c63c-e479-4190-8054-9c5ba2e9ec81"
-        },
-        :status   => {
-          :conditions => [
-            Kubeclient::Resource.new(
-              :reason => "ProvisionedSuccessfully"
-            )
-          ]
-        },
-        :id       => 123
-      )
-    end
+    context "Source.availability_check task" do
+      let(:source_class) { TopologicalInventory::Openshift::Operations::Source }
+      let(:operation_name) { 'Source.availability_check' }
 
-    before do
-      require "active_support/json"
-      require "active_support/core_ext/object/json" # required to get service_plan.to_json to work properly
+      it "runs availability check" do
+        source = source_class.new(params)
+        allow(source_class).to receive(:new).and_return(source)
 
-      stub_request(:get, service_plan_url).with(:headers => headers).to_return(
-        :headers => headers, :body => service_plan.to_json
-      )
-      stub_request(:get, source_url).with(:headers => headers).to_return(
-        :headers => headers, :body => source.to_json
-      )
-      stub_request(:get, service_offering_url).with(:headers => headers).to_return(
-        :headers => headers, :body => service_offering.to_json
-      )
-      stub_request(:get, service_instances_url).with(:headers => headers).to_return(
-        :headers => headers, :body => {:meta => {:count => 1}, :data => [service_instance.to_hash]}.to_json
-      )
+        expect(source).to receive(:availability_check)
 
-      allow(
-        TopologicalInventory::Openshift::Operations::Core::ServiceCatalogClient
-      ).to receive(:new).with(source.id, task.id.to_s, identity).and_return(service_catalog_client)
-
-      allow(service_catalog_client).to receive(:order_service).and_return(service_instance)
-      allow(service_catalog_client).to receive(:wait_for_provision_complete).and_return([service_instance, reason, message])
-
-      stub_request(:patch, task_url).with(:headers => headers)
-    end
-
-    it "orders the service via the service catalog client" do
-      expect(service_catalog_client).to receive(:order_service).with("plan_name", "service_offering", "order_params")
-      expect(service_catalog_client).to receive(:wait_for_provision_complete).with(service_instance.metadata.name, service_instance.metadata.namespace)
-      thread = described_class.new("ServicePlan", "order", payload, metrics).process
-      thread.join
-    end
-
-    it "makes a patch request to the update task endpoint with the status and context" do
-      expected_context = {
-        :service_instance => {
-          :source_id         => source.id,
-          :source_ref        => service_instance.source_ref,
-          :provision_state   => reason,
-          :provision_message => message,
-          :id                => service_instance.id.to_s,
-          :url               => "#{base_url_path}service_instances/#{service_instance.id}"
-        }
-      }
-
-      thread = described_class.new("ServicePlan", "order", payload, metrics).process
-      thread.join
-
-      expect(
-        a_request(:patch, task_url).with(:body => {"status" => "ok", "state" => "completed", "context" => expected_context})
-      ).to have_been_made
-    end
-  end
-
-  context "#process" do
-    it "updates task with not_implemented error if operation not supported" do
-      # Non-existing class
-      task_id = '1'
-      processor = described_class.new('SomeModel', 'some_method', {'params' => {'task_id' => task_id}}, nil)
-      expect(processor).to receive(:update_task).with(task_id,
-                                                      :state   => 'completed',
-                                                      :status  => 'error',
-                                                      :context => {:error => "SomeModel#some_method not implemented"})
-      processor.process
-
-      # Non-existing method
-      task_id = '2'
-      processor = described_class.new('ServiceCatalogClient', 'some_method', {'params' => {'task_id' => task_id}}, nil)
-      expect(processor).to receive(:update_task).with(task_id,
-                                                      :state   => 'completed',
-                                                      :status  => 'error',
-                                                      :context => {:error => "ServiceCatalogClient#some_method not implemented"})
-      processor.process
+        subject.process
+      end
     end
   end
 end

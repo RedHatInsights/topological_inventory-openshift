@@ -2,33 +2,66 @@
 
 $LOAD_PATH << File.expand_path("../lib", __dir__)
 require "bundler/setup"
+require "optimist"
 require "topological_inventory/openshift/operations/worker"
-require "topological_inventory/openshift/operations/application_metrics"
+require "topological_inventory/openshift/operations/metrics"
+
+def parse_args
+  Optimist.options do
+    opt :metrics_port, "Port to expose the metrics endpoint on, 0 to disable metrics",
+        :type => :integer, :default => (ENV["METRICS_PORT"] || 9394).to_i
+
+    opt :queue_host, "Kafka messaging: hostname or IP", :type => :string, :default => ENV["QUEUE_HOST"] || "localhost"
+    opt :queue_port, "Kafka messaging: port", :type => :integer, :default => (ENV["QUEUE_PORT"] || 9092).to_i
+
+    opt :sources_scheme, "Sources API scheme", :type => :string, :default => ENV["SOURCES_SCHEME"] || "http"
+    opt :sources_host, "Sources API host name", :type => :string, :default => ENV["SOURCES_HOST"]
+    opt :sources_port, "Sources API port", :type => :integer, :default => ENV["SOURCES_PORT"].to_i
+
+    opt :topological_scheme, "Topological Inventory API scheme", :type => :string, :default => ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_SCHEME"] || "http"
+    opt :topological_host, "Topological Inventory API host name", :type => :string, :default => ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_HOST"]
+    opt :topological_port, "Topological Inventory API port", :type => :integer, :default => ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_PORT"].to_i
+  end
+end
+
+def check_args(args)
+  %i[queue_host queue_port
+     sources_scheme sources_host sources_port
+     topological_scheme topological_host topological_port].each do |arg|
+    Optimist.die arg, "can't be blank" if args[arg].blank?
+    Optimist.die arg, "can't be zero" if arg.to_s.index('port').present? && args[arg].zero?
+  end
+end
+
+args = parse_args
+check_args(args)
 
 TopologicalInventoryApiClient.configure do |config|
-  config.scheme = "http"
-  config.host = "#{ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_HOST"]}:#{ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_PORT"]}"
+  config.scheme = args[:topological_scheme]
+  config.host = "#{args[:topological_host]}:#{args[:topological_port]}"
 end
 
 SourcesApiClient.configure do |config|
-  config.scheme = ENV["SOURCES_SCHEME"]
-  config.host   = "#{ENV["SOURCES_HOST"]}:#{ENV["SOURCES_PORT"]}"
+  config.scheme = args[:sources_scheme] || "http"
+  config.host   = "#{args[:sources_host]}:#{args[:sources_port]}"
 end
 
-metrics_port = (ENV["METRICS_PORT"] || 9394).to_i
-
 TopologicalInventory::Openshift::MessagingClient.configure do |config|
-  config.queue_host = ENV["QUEUE_HOST"] || "localhost"
-  config.queue_port = (ENV['QUEUE_PORT'] || 9092).to_i
+  config.queue_host = args[:queue_host]
+  config.queue_port = args[:queue_port]
+end
+
+metrics = TopologicalInventory::Openshift::Operations::Metrics.new(args[:metrics_port])
+operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(metrics)
+
+Signal.trap("TERM") do
+  metrics&.stop_server
+  exit
 end
 
 begin
-  metrics = TopologicalInventory::Openshift::Operations::ApplicationMetrics.new(metrics_port)
-  operations_worker = TopologicalInventory::Openshift::Operations::Worker.new(:metrics => metrics)
   operations_worker.run
 rescue => err
   puts err
   raise
-ensure
-  metrics.stop_server
 end
