@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: topological-inventory-openshift
+objects:
+- apiVersion: cloud.redhat.com/v1alpha1
+  kind: ClowdApp
+  metadata:
+    name: topo-openshift
+  spec:
+    envName: ${ENV_NAME}
+    deployments:
+    - name: operations
+      minReplicas: ${{MIN_REPLICAS}}
+      webServices:
+        public:
+          enabled: false
+        private:
+          enabled: false
+      podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        command:
+        - bin/openshift-operations
+        env:
+        - name: LOG_LEVEL
+          value: ${LOG_LEVEL}
+        - name: SOURCES_HOST
+          value: ${SOURCES_HOST}
+        - name: SOURCES_PORT
+          value: ${SOURCES_PORT}
+        - name: SOURCES_SCHEME
+          value: ${SOURCES_SCHEME}
+        - name: TOPOLOGICAL_INVENTORY_HOST
+          value: ${TOPOLOGICAL_INVENTORY_HOST}
+        - name: TOPOLOGICAL_INVENTORY_PORT
+          value: ${TOPOLOGICAL_INVENTORY_PORT}
+        - name: TOPOLOGICAL_INVENTORY_SCHEME}
+          value: ${TOPOLOGICAL_INVENTORY_SCHEME}
+        - name: UPDATE_SOURCES_VIA_API
+          value: ${UPDATE_SOURCES_VIA_API}
+        livenessProbe:
+          exec:
+            command:
+            - bash
+            - -c
+            - find /tmp -mmin -60 2>/dev/null | grep healthy
+          initialDelaySeconds: 1800
+          periodSeconds: 300
+        resources:
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+    kafkaTopics:
+    - topicName: platform.sources.status
+      partitions: 3
+      replicas: 3
+    - topicName: platform.topological-inventory.operations-openshift
+      partitions: 3
+      replicas: 3
+parameters:
+- name: CPU_LIMIT
+  value: 200m
+- name: CPU_REQUEST
+  value: 100m
+- description: Clowder ENV
+  name: ENV_NAME
+  required: true
+- description: Image
+  name: IMAGE
+  value: quay.io/cloudservices/topological-inventory-openshift
+- description: Image tag
+  name: IMAGE_TAG
+  required: true
+- name: LOG_LEVEL
+  value: WARN
+- name: MEMORY_LIMIT
+  value: 200Mi
+- name: MEMORY_REQUEST
+  value: 100Mi
+- description: The number of replicas to use for the prometheus deployment
+  name: MIN_REPLICAS
+  value: '1'
+- description: Host to use for the Sources service URL.
+  displayName: Sources Service Host
+  name: SOURCES_HOST
+  required: true
+  value: sources-api-svc
+- description: Port to use for the Sources service URL.
+  displayName: Sources Service Port
+  name: SOURCES_PORT
+  value: '8000'
+- description: Scheme to use for the Sources service URL.
+  displayName: Sources Service Scheme
+  name: SOURCES_SCHEME
+  value: http
+- name: TOPOLOGICAL_INVENTORY_HOST
+  displayName: Topological Inventory Host
+  description: Host to use for the topological inventory service URL.
+  value: topo-api-svc
+- name: TOPOLOGICAL_INVENTORY_PORT
+  displayName: Topological Inventory Port
+  description: Port to use for the topological inventory service URL.
+  value: "8000"
+- name: TOPOLOGICAL_INVENTORY_SCHEME
+  displayName: Topological Inventory Scheme
+  description: Scheme to use for the topological inventory service URL. Can be either http or https
+  value: http
+- name: UPDATE_SOURCES_VIA_API
+  value: ''
