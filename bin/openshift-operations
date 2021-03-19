@@ -18,9 +18,9 @@ def parse_args
     opt :sources_host, "Sources API host name", :type => :string, :default => ENV["SOURCES_HOST"]
     opt :sources_port, "Sources API port", :type => :integer, :default => ENV["SOURCES_PORT"].to_i
 
-    opt :topological_scheme, "Topological Inventory API scheme", :type => :string, :default => ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_SCHEME"] || "http"
-    opt :topological_host, "Topological Inventory API host name", :type => :string, :default => ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_HOST"]
-    opt :topological_port, "Topological Inventory API port", :type => :integer, :default => ENV["TOPOLOGICAL_INVENTORY_API_SERVICE_PORT"].to_i
+    opt :topological_scheme, "Topological Inventory API scheme", :type => :string, :default => ENV["TOPOLOGICAL_INVENTORY_SCHEME"] || "http"
+    opt :topological_host, "Topological Inventory API host name", :type => :string, :default => ENV["TOPOLOGICAL_INVENTORY_HOST"]
+    opt :topological_port, "Topological Inventory API port", :type => :integer, :default => ENV["TOPOLOGICAL_INVENTORY_PORT"].to_i
   end
 end
 
