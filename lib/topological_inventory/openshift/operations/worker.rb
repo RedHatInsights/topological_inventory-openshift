@@ -17,11 +17,24 @@ module TopologicalInventory
         end
 
         def run
-          logger.info("Topological Inventory Openshift Operations worker started...")
+          logger.info("[STDERR-INFO] Topological Inventory Openshift Operations worker started...")
+          logger.warn("[STDERR-WARN] Topological Inventory Openshift Operations worker started...")
+          logger.debug("[STDERR-DEBUG] Topological Inventory Openshift Operations worker started...")
+          logger.error("[STDERR-ERROR] Topological Inventory Openshift Operations worker started...")
 
+          raise StandardError, "This is standard and simulated error."
+        rescue => e
+          logger.error("#{e}\n#{e.backtrace.join("\n")}")
+        ensure
+          original_run
+        end
+
+        def original_run
           client.subscribe_topic(queue_opts) do |message|
             process_message(message)
           end
+        rescue => e
+          logger.error("#{e}\n#{e.backtrace.join("\n")}")
         ensure
           client&.close
         end
