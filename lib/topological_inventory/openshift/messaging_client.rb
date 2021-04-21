@@ -1,5 +1,6 @@
 require "manageiq-messaging"
 require "topological_inventory/providers/common/messaging_client"
+require "topological_inventory/providers/common/clowder_config"
 
 module TopologicalInventory
   module Openshift
@@ -15,7 +16,7 @@ module TopologicalInventory
         {
           :auto_ack    => false,
           :max_bytes   => 50_000,
-          :service     => OPERATIONS_QUEUE_NAME,
+          :service     => TopologicalInventory::Providers::Common::ClowderConfig.kafka_topic(OPERATIONS_QUEUE_NAME),
           :persist_ref => "topological-inventory-operations-openshift"
         }
       end
