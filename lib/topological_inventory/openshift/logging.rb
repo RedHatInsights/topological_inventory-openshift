@@ -17,7 +17,13 @@ module TopologicalInventory
     end
 
     def self.logger
-      @logger ||= Insights::Loggers::Factory.create_logger(logger_class, :app_name => APP_NAME)
+      log_params = {:app_name => APP_NAME}
+
+      if logger_class == "Insights::Loggers::StdErrorLogger"
+        log_params[:extend_module] = "TopologicalInventory::Providers::Common::LoggingFunctions"
+      end
+
+      @logger ||= Insights::Loggers::Factory.create_logger(logger_class, log_params)
     end
 
     module Logging

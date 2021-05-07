@@ -17,6 +17,7 @@ module TopologicalInventory
         end
 
         def run
+          logger.availability_check("STDERRCHECK")
           logger.info("[STDERR-INFO] Topological Inventory Openshift Operations worker started...")
           logger.warn("[STDERR-WARN] Topological Inventory Openshift Operations worker started...")
           logger.debug("[STDERR-DEBUG] Topological Inventory Openshift Operations worker started...")
